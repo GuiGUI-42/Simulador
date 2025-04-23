@@ -15,7 +15,8 @@
 </head>
 <body>
     <div class="header">
-        <a href="/">Página Principal</a> | <a href="/pagina2">Página 2</a>| <a href="/pagina3">Página 3</a>
+        <a href="/">Página Principal</a> | <a href="/pagina2">Página 2</a>| <a href="/pagina3">Página 3</a> | <a href="/pagina4">Página 4</a> 
+        
     </div>
 
     <h1>🛠️ Simulador de Controle (Flask)</h1>
@@ -74,8 +75,6 @@
     <div class="section">
         <h3>Gráficos</h3>
         <img id="plot" src="" style="max-width: 100%; border: 1px solid #ccc;">
-        <img id="bode_plot" src="" style="max-width: 100%; border: 1px solid #ccc;">
-        <img id="nyquist_plot" src="" style="max-width: 100%; border: 1px solid #ccc;">
     </div>
 
     <script>
@@ -83,34 +82,30 @@
             const tipo = document.getElementById("tipo").value;
             const data = {
                 tipo,
-                p1_1: document.getElementById("p1_1").value,
-                z_1: document.getElementById("z_1").value,
-                p1_2: document.getElementById("p1_2").value,
-                p2_2: document.getElementById("p2_2").value,
-                z_2: document.getElementById("z_2").value,
-                polo_controlador: document.getElementById("polo_controlador").value,
-                zero_controlador: document.getElementById("zero_controlador").value
+                p1_1: document.getElementById("p1_1")?.value || -1,
+                z_1: document.getElementById("z_1")?.value || 0,
+                p1_2: document.getElementById("p1_2")?.value || -1,
+                p2_2: document.getElementById("p2_2")?.value || -2,
+                z_2: document.getElementById("z_2")?.value || 0
             };
-    
+        
             const res = await fetch('/atualizar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-    
+        
             const json = await res.json();
-    
+        
             // Atualiza funções de transferência
-            document.getElementById("latex_planta").innerHTML = json.latex_planta;
-            document.getElementById("latex_controlador").innerHTML = json.latex_controlador;
-            document.getElementById("latex_open").innerHTML = json.latex_open;
-            document.getElementById("latex_closed").innerHTML = json.latex_closed;
+            document.getElementById("latex_planta").innerHTML = json.latex_planta || "Erro ao carregar planta";
+            document.getElementById("latex_controlador").innerHTML = json.latex_controlador || "Erro ao carregar controlador";
+            document.getElementById("latex_open").innerHTML = json.latex_open || "Erro ao carregar malha aberta";
+            document.getElementById("latex_closed").innerHTML = json.latex_closed || "Erro ao carregar malha fechada";
             if (window.MathJax) MathJax.typesetPromise();
-    
+        
             // Atualiza gráficos
-            document.getElementById("plot").src = json.plot_url;
-            document.getElementById("bode_plot").src = json.bode_url;
-            document.getElementById("nyquist_plot").src = json.nyquist_url;
+            document.getElementById("plot").src = json.plot_url || "";
         }
     
         function atualizarCampos() {

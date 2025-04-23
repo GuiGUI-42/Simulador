@@ -1,17 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Página 4</title>
+    <title>Simulador de Controle - Página 4</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
     <style>
-        body { font-family: sans-serif; }
-        .header { background: #f4f4f4; padding: 10px; text-align: center; }
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            margin: 0;
+            padding: 0;
+        }
+        .left-section {
+            width: 40%;
+            padding: 20px;
+            background: #f9f9f9;
+            border-right: 1px solid #ccc;
+        }
+        .right-section {
+            width: 60%;
+            padding: 20px;
+        }
+        h3 {
+            margin-top: 0;
+        }
+        .latex-container {
+            font-size: 1.2em;
+            background: #eee;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+        #plot_pz, #plot_open {
+            width: 100%;
+            height: 400px;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="/">Página Principal</a> | <a href="/pagina2">Página 2</a> | <a href="/pagina3">Página 3</a> | <a href="/pagina4">Página 4</a>
+    <div class="left-section">
+        <h3>Funções da Planta</h3>
+        <div id="latex_planta_monomial" class="latex-container">Carregando forma monômica...</div>
+        <div id="latex_planta_polynomial" class="latex-container">Carregando forma polinomial...</div>
     </div>
-    <h1>🛠️ Simulador de Controle (Página 4)</h1>
-    <a href="/pagina4">Página 4</a>
+
+    <div class="right-section">
+        <h3>Gráficos</h3>
+        <h4>Diagrama de Polos e Zeros</h4>
+        <div id="plot_pz"></div>
+        <h4>Resposta ao Degrau (Malha Aberta)</h4>
+        <div id="plot_open"></div>
+    </div>
+
+    <script>
+        async function atualizar() {
+            const tipo = document.getElementById("tipo")?.value || "Caso 1";
+            const data = {
+                tipo,
+                p1_1: document.getElementById("p1_1")?.value || -1,
+                z_1: document.getElementById("z_1")?.value || 0
+            };
+
+            const res = await fetch('/atualizar_pagina4', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const json = await res.json();
+
+            // Atualiza funções da planta
+            document.getElementById("latex_planta_monomial").innerHTML = json.latex_planta_monomial || "Erro ao carregar forma monômica";
+            document.getElementById("latex_planta_polynomial").innerHTML = json.latex_planta_polynomial || "Erro ao carregar forma polinomial";
+            if (window.MathJax) MathJax.typesetPromise();
+
+            // Atualiza gráficos
+            const plotPZData = json.plot_pz_data; // Dados do diagrama de polos e zeros
+            const plotOpenData = json.plot_open_data; // Dados da resposta ao degrau
+
+            // Renderiza o gráfico de Polos e Zeros
+            Plotly.newPlot('plot_pz', plotPZData.data, plotPZData.layout);
+
+            // Renderiza o gráfico de Resposta ao Degrau
+            Plotly.newPlot('plot_open', plotOpenData.data, plotOpenData.layout);
+
+            // Adiciona evento de hover para o gráfico de Resposta ao Degrau
+            const plotOpenDiv = document.getElementById('plot_open');
+            plotOpenDiv.on('plotly_hover', function(eventData) {
+                const point = eventData.points[0];
+                console.log(`X: ${point.x}, Y: ${point.y}`);
+            });
+        }
+
+        window.onload = () => {
+            atualizar();
+        };
+    </script>
 </body>
 </html>
