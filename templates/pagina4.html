@@ -17,13 +17,13 @@
             padding: 0;
         }
         .left-section {
-            width: 40%;
+            width: 50%;
             padding: 20px;
             background: #f9f9f9;
             border-right: 1px solid #ccc;
         }
         .right-section {
-            width: 60%;
+            width: 50%;
             padding: 20px;
         }
         h3 {
@@ -36,17 +36,54 @@
             margin-bottom: 20px;
             border: 1px solid #ccc;
         }
-        #plot_pz, #plot_open {
+        #plot_pz, #plot_open, #plot_closed {
             width: 100%;
             height: 400px;
+        }
+        .slider-container {
+            margin-bottom: 20px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
         }
     </style>
 </head>
 <body>
     <div class="left-section">
-        <h3>Funções da Planta</h3>
+        <h3>Ajuste de Parâmetros</h3>
+        <div class="slider-container">
+            <label class="slider-label">
+                <span>Polo da Planta:</span>
+            </label>
+            <input id="polo-slider" type="range" min="-10" max="0" step="0.001" value="-1">
+            <input id="polo-input" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
+        </div>
+        <div class="slider-container">
+            <label class="slider-label">
+                <span>Zero da Planta:</span>
+            </label>
+            <input id="zero-slider" type="range" min="-10" max="10" step="0.001" value="0">
+            <input id="zero-input" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
+        </div>
+        <div class="slider-container">
+            <label class="slider-label">
+                <span>Polo do Controlador:</span>
+            </label>
+            <input id="controlador-polo-slider" type="range" min="-10" max="0" step="0.001" value="-1">
+            <input id="controlador-polo-input" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
+        </div>
+        <div class="slider-container">
+            <label class="slider-label">
+                <span>Zero do Controlador:</span>
+            </label>
+            <input id="controlador-zero-slider" type="range" min="-10" max="10" step="0.001" value="0">
+            <input id="controlador-zero-input" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
+        </div>
+
+        <h3>Funções de Transferência</h3>
         <div id="latex_planta_monomial" class="latex-container">Carregando forma monômica...</div>
-        <div id="latex_planta_polynomial" class="latex-container">Carregando forma polinomial...</div>
+        <div id="latex_controlador" class="latex-container">Carregando controlador...</div>
     </div>
 
     <div class="right-section">
@@ -55,15 +92,22 @@
         <div id="plot_pz"></div>
         <h4>Resposta ao Degrau (Malha Aberta)</h4>
         <div id="plot_open"></div>
+        <h4>Resposta ao Degrau (Malha Fechada)</h4>
+        <div id="plot_closed"></div>
     </div>
 
     <script>
         async function atualizar() {
-            const tipo = document.getElementById("tipo")?.value || "Caso 1";
+            const polo = parseFloat(document.getElementById("polo-slider").value).toFixed(3);
+            const zero = parseFloat(document.getElementById("zero-slider").value).toFixed(3);
+            const controladorPolo = parseFloat(document.getElementById("controlador-polo-slider").value).toFixed(3);
+            const controladorZero = parseFloat(document.getElementById("controlador-zero-slider").value).toFixed(3);
+
             const data = {
-                tipo,
-                p1_1: document.getElementById("p1_1")?.value || -1,
-                z_1: document.getElementById("z_1")?.value || 0
+                p1_1: polo,
+                z_1: zero,
+                controlador_polo: controladorPolo,
+                controlador_zero: controladorZero
             };
 
             const res = await fetch('/atualizar_pagina4', {
@@ -74,28 +118,75 @@
 
             const json = await res.json();
 
-            // Atualiza funções da planta
+            // Atualiza funções de transferência
             document.getElementById("latex_planta_monomial").innerHTML = json.latex_planta_monomial || "Erro ao carregar forma monômica";
-            document.getElementById("latex_planta_polynomial").innerHTML = json.latex_planta_polynomial || "Erro ao carregar forma polinomial";
+            document.getElementById("latex_controlador").innerHTML = json.latex_controlador || "Erro ao carregar controlador";
             if (window.MathJax) MathJax.typesetPromise();
 
             // Atualiza gráficos
             const plotPZData = json.plot_pz_data; // Dados do diagrama de polos e zeros
-            const plotOpenData = json.plot_open_data; // Dados da resposta ao degrau
+            const plotOpenData = json.plot_open_data; // Dados da resposta ao degrau (malha aberta)
+            const plotClosedData = json.plot_closed_data; // Dados da resposta ao degrau (malha fechada)
 
             // Renderiza o gráfico de Polos e Zeros
             Plotly.newPlot('plot_pz', plotPZData.data, plotPZData.layout);
 
-            // Renderiza o gráfico de Resposta ao Degrau
+            // Renderiza o gráfico de Resposta ao Degrau (Malha Aberta)
             Plotly.newPlot('plot_open', plotOpenData.data, plotOpenData.layout);
 
-            // Adiciona evento de hover para o gráfico de Resposta ao Degrau
-            const plotOpenDiv = document.getElementById('plot_open');
-            plotOpenDiv.on('plotly_hover', function(eventData) {
-                const point = eventData.points[0];
-                console.log(`X: ${point.x}, Y: ${point.y}`);
-            });
+            // Renderiza o gráfico de Resposta ao Degrau (Malha Fechada)
+            Plotly.newPlot('plot_closed', plotClosedData.data, plotClosedData.layout);
         }
+
+        // Atualiza os valores exibidos ao mover os sliders
+        document.getElementById("polo-slider").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("polo-input").value = value;
+            atualizar();
+        });
+
+        document.getElementById("zero-slider").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("zero-input").value = value;
+            atualizar();
+        });
+
+        document.getElementById("controlador-polo-slider").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("controlador-polo-input").value = value;
+            atualizar();
+        });
+
+        document.getElementById("controlador-zero-slider").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("controlador-zero-input").value = value;
+            atualizar();
+        });
+
+        // Atualiza os sliders ao alterar os valores nas caixas de texto
+        document.getElementById("polo-input").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("polo-slider").value = value;
+            atualizar();
+        });
+
+        document.getElementById("zero-input").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("zero-slider").value = value;
+            atualizar();
+        });
+
+        document.getElementById("controlador-polo-input").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("controlador-polo-slider").value = value;
+            atualizar();
+        });
+
+        document.getElementById("controlador-zero-input").addEventListener("input", (event) => {
+            const value = parseFloat(event.target.value).toFixed(3);
+            document.getElementById("controlador-zero-slider").value = value;
+            atualizar();
+        });
 
         window.onload = () => {
             atualizar();

@@ -174,15 +174,36 @@ def atualizar_pagina4():
     data = request.get_json()
     p1_1 = float(data.get("p1_1", -1))
     z_1 = float(data.get("z_1", 0))
+    controlador_polo = float(data.get("controlador_polo", -1))
+    controlador_zero = float(data.get("controlador_zero", 0))
 
     # Define a função de transferência da planta
-    num = np.poly([z_1])
-    den = np.poly([p1_1])
-    G = ctl.tf(num, den)
+    num_planta = np.poly([z_1])
+    den_planta = np.poly([p1_1])
+    G_planta = ctl.tf(num_planta, den_planta)
 
-    # Dados para o gráfico de Polos e Zeros
-    zeros = np.roots(num)
-    poles = np.roots(den)
+    # Define a função de transferência do controlador
+    num_controlador = np.poly([controlador_zero])
+    den_controlador = np.poly([controlador_polo])
+    G_controlador = ctl.tf(num_controlador, den_controlador)
+
+    # Define a malha fechada (considera planta e controlador)
+    G_open = G_planta  # Malha aberta depende apenas da planta
+    G_closed = ctl.feedback(G_planta * G_controlador)  # Malha fechada considera planta e controlador
+
+    # Arredonda os coeficientes para três casas decimais
+    num_planta_rounded = np.round(num_planta, 3)
+    den_planta_rounded = np.round(den_planta, 3)
+    num_controlador_rounded = np.round(num_controlador, 3)
+    den_controlador_rounded = np.round(den_controlador, 3)
+
+    # Formata as funções de transferência com os coeficientes arredondados
+    latex_planta_monomial = f"\\[ G(s) = \\frac{{{np.poly1d(num_planta_rounded, variable='s')}}}{{{np.poly1d(den_planta_rounded, variable='s')}}} \\]"
+    latex_controlador = f"\\[ G_c(s) = \\frac{{{np.poly1d(num_controlador_rounded, variable='s')}}}{{{np.poly1d(den_controlador_rounded, variable='s')}}} \\]"
+
+    # Dados para os gráficos
+    zeros = np.roots(num_planta)
+    poles = np.roots(den_planta)
     plot_pz_data = {
         "data": [
             {"x": np.real(zeros).tolist(), "y": np.imag(zeros).tolist(), "mode": "markers", "name": "Zeros"},
@@ -191,20 +212,30 @@ def atualizar_pagina4():
         "layout": {"title": "Diagrama de Polos e Zeros", "xaxis": {"title": "Re"}, "yaxis": {"title": "Im"}}
     }
 
-    # Dados para o gráfico de Resposta ao Degrau
-    T, yout = ctl.step_response(G)
+    # Resposta ao degrau (Malha Aberta - apenas planta)
+    T_open, yout_open = ctl.step_response(G_open)
     plot_open_data = {
         "data": [
-            {"x": T.tolist(), "y": yout.tolist(), "mode": "lines", "name": "Resposta ao Degrau"}
+            {"x": T_open.tolist(), "y": yout_open.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Aberta)"}
         ],
         "layout": {"title": "Resposta ao Degrau (Malha Aberta)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
     }
 
+    # Resposta ao degrau (Malha Fechada - planta e controlador)
+    T_closed, yout_closed = ctl.step_response(G_closed)
+    plot_closed_data = {
+        "data": [
+            {"x": T_closed.tolist(), "y": yout_closed.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Fechada)"}
+        ],
+        "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
+    }
+
     return jsonify({
-        "latex_planta_monomial": f"\\[ G(s) = \\frac{{{np.poly1d(num)}}}{{{np.poly1d(den)}}} \\]",
-        "latex_planta_polynomial": f"\\[ G(s) = \\frac{{{' + '.join(map(str, num))}}}{{{' + '.join(map(str, den))}}} \\]",
+        "latex_planta_monomial": latex_planta_monomial,
+        "latex_controlador": latex_controlador,
         "plot_pz_data": plot_pz_data,
-        "plot_open_data": plot_open_data
+        "plot_open_data": plot_open_data,
+        "plot_closed_data": plot_closed_data
     })
 
 if __name__ == '__main__':
