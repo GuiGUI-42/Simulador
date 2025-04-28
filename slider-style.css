@@ -1,0 +1,62 @@
+/* Estilo para os sliders */
+input[type="range"] {
+    -webkit-appearance: none; /* Remove o estilo padrão do navegador */
+    width: 100%; /* Largura total */
+    height: 10px; /* Altura do slider */
+    border-radius: 5px; /* Bordas arredondadas */
+    background: linear-gradient(90deg, #4caf50, #2196f3); /* Gradiente de cor */
+    outline: none; /* Remove o contorno ao focar */
+    opacity: 0.9; /* Transparência leve */
+    transition: opacity 0.2s; /* Transição suave ao interagir */
+}
+
+input[type="range"]:hover {
+    opacity: 1; /* Torna o slider totalmente opaco ao passar o mouse */
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Remove o estilo padrão do navegador */
+    appearance: none;
+    width: 20px; /* Largura do botão */
+    height: 20px; /* Altura do botão */
+    border-radius: 50%; /* Botão arredondado */
+    background: #ffffff; /* Cor do botão */
+    border: 2px solid #4caf50; /* Borda do botão */
+    cursor: pointer; /* Cursor de ponteiro ao passar o mouse */
+    transition: background 0.2s, transform 0.2s; /* Transição suave ao interagir */
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #4caf50; /* Cor do botão ao passar o mouse */
+    transform: scale(1.2); /* Aumenta o botão ao passar o mouse */
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #4caf50;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    background: #4caf50;
+    transform: scale(1.2);
+}
+
+input[type="range"]::-ms-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #4caf50;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+input[type="range"]::-ms-thumb:hover {
+    background: #4caf50;
+    transform: scale(1.2);
+}
