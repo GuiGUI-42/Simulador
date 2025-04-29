@@ -172,24 +172,25 @@ def atualizar_nyquist():
 @app.route('/atualizar_pagina4', methods=['POST'])
 def atualizar_pagina4():
     data = request.get_json()
-    p1_1 = float(data.get("p1_1", -1))
-    z_1 = float(data.get("z_1", 0))
-    controlador_polo = float(data.get("controlador_polo", -1))
-    controlador_zero = float(data.get("controlador_zero", 0))
+    polos_planta = data.get("polos_planta", [-1])
+    zeros_planta = data.get("zeros_planta", [0])
+    polos_controlador = data.get("polos_controlador", [-1])
+    zeros_controlador = data.get("zeros_controlador", [0])
 
-    # Define a função de transferência da planta
-    num_planta = np.poly([z_1])
-    den_planta = np.poly([p1_1])
+    # Filtra zeros realmente diferentes de zero
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
+    den_planta = np.poly(polos_planta)
+
+    zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
+    num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
+    den_controlador = np.poly(polos_controlador)
+
     G_planta = ctl.tf(num_planta, den_planta)
-
-    # Define a função de transferência do controlador
-    num_controlador = np.poly([controlador_zero])
-    den_controlador = np.poly([controlador_polo])
     G_controlador = ctl.tf(num_controlador, den_controlador)
 
-    # Define a malha fechada (considera planta e controlador)
-    G_open = G_planta  # Malha aberta depende apenas da planta
-    G_closed = ctl.feedback(G_planta * G_controlador)  # Malha fechada considera planta e controlador
+    G_open = G_planta
+    G_closed = ctl.feedback(G_planta * G_controlador)
 
     # Arredonda os coeficientes para três casas decimais
     num_planta_rounded = np.round(num_planta, 3)
@@ -199,7 +200,7 @@ def atualizar_pagina4():
 
     # Formata as funções de transferência com os coeficientes arredondados
     latex_planta_monomial = f"\\[ G(s) = \\frac{{{np.poly1d(num_planta_rounded, variable='s')}}}{{{np.poly1d(den_planta_rounded, variable='s')}}} \\]"
-    latex_controlador = f"\\[ G_c(s) = \\frac{{{np.poly1d(num_controlador_rounded, variable='s')}}}{{{np.poly1d(den_controlador_rounded, variable='s')}}} \\]"
+    latex_controlador = f"\\[ G_c(s) = \\frac{{{np.poly1d(num_controlador_rounded, variable='s')}}}{{{np.poly1d(den_controlador_rounded, variable='s')}}} \\ ]"
 
     # Dados para os gráficos
     zeros = np.roots(num_planta)
@@ -230,13 +231,101 @@ def atualizar_pagina4():
         "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
     }
 
+    # Gere as strings LaTeX para as FTs
+    ordem_den_planta = len(den_planta) - 1
+    # Ordem do numerador: conta quantos zeros são diferentes de zero
+    ordem_num_planta = np.sum(np.abs(zeros_planta) > 1e-8)
+    if ordem_num_planta == 0:
+        ordem_num_planta = 0 if np.allclose(num_planta, [1]) else len(num_planta) - 1
+
+    ordem_controlador = len(den_controlador) - 1
+    ordem_num_controlador = np.sum(np.abs(zeros_controlador) > 1e-8)
+    if ordem_num_controlador == 0:
+        ordem_num_controlador = 0 if np.allclose(num_controlador, [1]) else len(num_controlador) - 1
+
+    latex_planta_polinomial = (
+        f"\\[ \\text{{Ordem: }} {ordem_den_planta} \\qquad "
+        f"G(s) = \\frac{{{latex_poly(num_planta, 's')}}}{{{latex_poly(den_planta, 's')}}} \\]"
+    )
+    latex_planta_fatorada = (
+        f"\\[ \\text{{Ordem: }} {ordem_den_planta} \\qquad "
+        f"G(s) = \\frac{{{latex_factored(zeros_planta, 's')}}}{{{latex_factored(polos_planta, 's')}}} \\]"
+    )
+    latex_controlador_polinomial = (
+        f"\\[ \\text{{Ordem: }} {ordem_controlador} \\qquad "
+        f"G_c(s) = \\frac{{{latex_poly(num_controlador, 's')}}}{{{latex_poly(den_controlador, 's')}}} \\]"
+    )
+    latex_controlador_fatorada = (
+        f"\\[ \\text{{Ordem: }} {ordem_controlador} \\qquad "
+        f"G_c(s) = \\frac{{{latex_factored(zeros_controlador, 's')}}}{{{latex_factored(polos_controlador, 's')}}} \\]"
+    )
+
+    latex_planta_monic = (
+        f"\\[ \\text{{Ordem: }} {ordem_den_planta} "
+        f"G(s) = \\frac{{{latex_monic(num_planta, 's')}}}{{{latex_monic(den_planta, 's')}}} \\]"
+    )
+    latex_controlador_monic = (
+        f"\\[ \\text{{Ordem: }} {ordem_controlador} "
+        f"G_c(s) = \\frac{{{latex_monic(num_controlador, 's')}}}{{{latex_monic(den_controlador, 's')}}} \\]"
+    )
+
     return jsonify({
         "latex_planta_monomial": latex_planta_monomial,
         "latex_controlador": latex_controlador,
         "plot_pz_data": plot_pz_data,
         "plot_open_data": plot_open_data,
-        "plot_closed_data": plot_closed_data
+        "plot_closed_data": plot_closed_data,
+        "latex_planta_polinomial": latex_planta_polinomial,
+        "latex_planta_monic": latex_planta_monic,
+        "latex_planta_fatorada": latex_planta_fatorada,
+        "latex_controlador_polinomial": latex_controlador_polinomial,
+        "latex_controlador_monic": latex_controlador_monic,
+        "latex_controlador_fatorada": latex_controlador_fatorada
     })
+
+def latex_poly(coeffs, var='s'):
+    coeffs = np.array(coeffs, dtype=float)
+    # Remove zeros à direita (constante no início)
+    coeffs = np.trim_zeros(coeffs, 'f')
+    # Se todos os zeros são zero, o numerador vira [1, 0, 0, ...]
+    # Queremos mostrar "1" se todos os coeficientes, exceto o primeiro, são zero
+    if len(coeffs) > 1 and np.allclose(coeffs[1:], 0) and np.isclose(coeffs[0], 1):
+        return "1"
+    if len(coeffs) == 1 and np.isclose(coeffs[0], 1):
+        return "1"
+    ordem = len(coeffs) - 1
+    termos = []
+    for i, c in enumerate(coeffs):
+        pot = ordem - i
+        if abs(c) < 1e-10:
+            continue
+        c_str = f"{c:.3g}" if abs(c) != 1 or pot == 0 else ("-" if c == -1 else "")
+        if pot > 1:
+            termos.append(f"{c_str}{var}^{pot}")
+        elif pot == 1:
+            termos.append(f"{c_str}{var}")
+        else:
+            termos.append(f"{c_str}")
+    return " + ".join(termos).replace("+ -", "- ")
+
+def latex_monic(coeffs, var='s'):
+    if abs(coeffs[0]) < 1e-10:
+        return latex_poly(coeffs, var)
+    norm = coeffs / coeffs[0]
+    return latex_poly(norm, var)
+
+def latex_factored(roots, var='s'):
+    if len(roots) == 0 or np.allclose(roots, 0):
+        return "1"
+    termos = []
+    for r in roots:
+        if abs(r) < 1e-10:
+            termos.append(f"{var}")
+        elif r < 0:
+            termos.append(f"({var} {r:+.3g})")
+        else:
+            termos.append(f"({var} - {abs(r):.3g})")
+    return "".join(termos)
 
 if __name__ == '__main__':
     app.run(debug=True)

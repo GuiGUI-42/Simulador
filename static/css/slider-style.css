@@ -1,0 +1,375 @@
+/* Estilo para os sliders */
+input[type="range"] {
+    -webkit-appearance: none; /* Remove o estilo padrão do navegador */
+    width: 70%; /* Ajusta a largura */
+    height: 10px; /* Altura do slider */
+    border-radius: 5px; /* Bordas arredondadas */
+    background: linear-gradient(90deg, #4caf50, #2196f3); /* Gradiente de cor */
+    outline: none; /* Remove o contorno ao focar */
+    opacity: 0.9; /* Transparência leve */
+    transition: opacity 0.2s; /* Transição suave ao interagir */
+    margin-right: 10px;
+}
+
+input[type="range"]:hover {
+    opacity: 1; /* Torna o slider totalmente opaco ao passar o mouse */
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Remove o estilo padrão do navegador */
+    appearance: none;
+    width: 20px; /* Largura do botão */
+    height: 20px; /* Altura do botão */
+    border-radius: 50%; /* Botão arredondado */
+    background: #ffffff; /* Cor do botão */
+    border: 2px solid #4caf50; /* Borda do botão */
+    cursor: pointer; /* Cursor de ponteiro ao passar o mouse */
+    transition: background 0.2s, transform 0.2s; /* Transição suave ao interagir */
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #4caf50; /* Cor do botão ao passar o mouse */
+    transform: scale(1.2); /* Aumenta o botão ao passar o mouse */
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #4caf50;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    background: #4caf50;
+    transform: scale(1.2);
+}
+
+input[type="range"]::-ms-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #4caf50;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+input[type="range"]::-ms-thumb:hover {
+    background: #4caf50;
+    transform: scale(1.2);
+}
+
+/* Estilo geral para o corpo */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9; /* Fundo padrão */
+    color: #333; /* Cor do texto padrão */
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    height: 100vh; /* Altura total da tela */
+    transition: background-color 0.3s, color 0.3s; /* Transição suave para o modo escuro */
+}
+
+/* Estilo do menu de hambúrguer */
+.menu {
+    position: absolute;
+    top: 10px;
+    left: 10px; /* Move o menu para o canto superior esquerdo */
+    z-index: 1000;
+}
+
+.menu-icon {
+    cursor: pointer;
+    width: 30px;
+    height: 3px;
+    background-color: #333;
+    margin: 6px 0;
+    transition: background-color 0.3s;
+    position: relative;
+    z-index: 1200; /* Garante que as barras fiquem abaixo do menu-content */
+}
+
+.menu-content {
+    display: block; /* Sempre ocupa espaço, mas fica invisível se não .show */
+    pointer-events: none; /* Não interage quando invisível */
+    position: absolute;
+    top: 0; /* Sobrepõe as barras */
+    left: 0;
+    background-color: rgba(255,255,255,0.7); /* Translucido inicialmente */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    width: 200px;
+    opacity: 0;
+    transition: opacity 0.5s, background-color 0.5s;
+    z-index: 1100; /* Maior que o menu para sobrepor as barras */
+}
+
+.menu-content.show {
+    opacity: 1;
+    background-color: rgba(255,255,255,1); /* Opaco ao abrir */
+    pointer-events: auto; /* Interage normalmente */
+}
+
+.menu-content label {
+    display: block;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.menu-content input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.menu.open .menu-icon {
+    display: none;
+}
+
+/* Modo escuro */
+body.dark-mode {
+    background-color: #121212;
+    color: #f4f4f9;
+}
+
+body.dark-mode .menu-icon {
+    background-color: #f4f4f9;
+}
+
+body.dark-mode .menu-content {
+    background-color: #333;
+    color: #f4f4f9;
+    border-color: #444;
+}
+
+body.dark-mode .menu-content label {
+    color: #f4f4f9;
+}
+
+body.dark-mode .latex-container {
+    background: #232323;
+    color: #f4f4f9;
+    border-color: #444;
+}
+
+body.dark-mode input[type="checkbox"] {
+    accent-color: #4caf50;
+    background: #232323;
+    border-color: #444;
+}
+
+/* Letras pretas no modo escuro */
+body.dark-mode label,
+body.dark-mode select,
+body.dark-mode option {
+    color: #f4f4f9 !important;
+    background: #232323 !important;
+}
+
+body.dark-mode input[type="checkbox"] {
+    accent-color: #4caf50;
+    background: #232323;
+    border-color: #444;
+}
+
+/* Letras pretas no modo escuro para campos e títulos */
+body.dark-mode label,
+body.dark-mode select,
+body.dark-mode option,
+body.dark-mode input[type="checkbox"],
+body.dark-mode .slider-label,
+body.dark-mode .left-section h4,
+body.dark-mode .right-section h3,
+body.dark-mode .right-section h4,
+body.dark-mode .right-section .js-plotly-plot .gtitle,
+body.dark-mode .right-section .js-plotly-plot .gtitle-main {
+    color: #111 !important;
+    background: transparent !important;
+}
+
+/* Títulos dos gráficos pretos no modo escuro */
+body.dark-mode .right-section h3,
+body.dark-mode .right-section h4,
+body.dark-mode .right-section .js-plotly-plot .gtitle,
+body.dark-mode .right-section .js-plotly-plot .gtitle-main {
+    color: #111 !important;
+}
+
+body.dark-mode .left-section h4 {
+    color: #111 !important;
+}
+/* Modo escuro para o container fixo */
+body.dark-mode #parametros-fixos {
+    background: #232323;
+}
+
+/* Estilo para as seções */
+.left-section {
+    width: 48%; /* Ajusta a largura */
+    padding: 20px;
+    background: #ffffff; /* Fundo branco */
+    border-radius: 10px; /* Bordas arredondadas */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+    margin: 20px; /* Espaçamento interno */
+    border: 1px solid #ddd; /* Borda leve */
+    overflow-y: auto; /* Adiciona rolagem se necessário */
+}
+
+.right-section {
+    width: 48%; /* Ajusta a largura */
+    padding: 20px;
+    background: #ffffff; /* Fundo branco */
+    border-radius: 10px; /* Bordas arredondadas */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+    margin: 20px; /* Espaçamento interno */
+    border: 1px solid #ddd; /* Borda leve */
+    overflow-y: auto; /* Adiciona rolagem se necessário */
+}
+
+/* Títulos das seções */
+h3 {
+    margin-top: 0;
+    color: #333; /* Cor do texto */
+    font-size: 1.5em;
+    border-bottom: 2px solid #4caf50; /* Linha decorativa abaixo do título */
+    padding-bottom: 10px;
+}
+
+/* Estilo para os contêineres de LaTeX */
+.latex-container {
+    font-size: 1.2em;
+    background: #f9f9f9; /* Fundo claro */
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px; /* Bordas arredondadas */
+    border: 1px solid #ddd; /* Borda leve */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra leve */
+}
+
+/* Estilo para os gráficos */
+#plot_pz, #plot_open, #plot_closed {
+    width: 100%;
+    height: 400px;
+    border-radius: 8px; /* Bordas arredondadas */
+    border: 1px solid #ddd; /* Borda leve */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra leve */
+    background: #ffffff; /* Fundo branco */
+}
+
+/* Estilo para os contêineres dos sliders */
+.slider-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Estilo para os rótulos dos sliders */
+.slider-label {
+    font-size: 1em;
+    color: #555; /* Cor do texto */
+    margin-right: 10px;
+}
+
+/* Estilo para os campos de entrada */
+input[type="number"] {
+    width: 80px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px; /* Bordas arredondadas */
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1); /* Sombra interna */
+}
+
+#parametros-fixos {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    padding-bottom: 10px;
+}
+
+/* Modo escuro global */
+body.dark-mode,
+body.dark-mode .left-section,
+body.dark-mode .right-section,
+body.dark-mode #parametros-fixos,
+body.dark-mode .latex-container,
+body.dark-mode .menu-content {
+    background: #181818 !important;
+    color: #f4f4f9 !important;
+    border-color: #333 !important;
+}
+
+/* Títulos e textos */
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode label,
+body.dark-mode select,
+body.dark-mode option,
+body.dark-mode input,
+body.dark-mode .slider-label,
+body.dark-mode b,
+body.dark-mode span,
+body.dark-mode .js-plotly-plot .gtitle,
+body.dark-mode .js-plotly-plot .gtitle-main {
+    color: #f4f4f9 !important;
+    background: transparent !important;
+    border-color: #333 !important;
+}
+
+/* Inputs e sliders */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode option {
+    background: #232323 !important;
+    color: #f4f4f9 !important;
+    border-color: #333 !important;
+}
+
+body.dark-mode input[type="range"] {
+    background: linear-gradient(90deg, #4caf50, #2196f3) !important;
+}
+
+body.dark-mode input[type="checkbox"] {
+    accent-color: #4caf50;
+    background: #232323 !important;
+    border-color: #333 !important;
+}
+
+/* Plotly background */
+body.dark-mode .js-plotly-plot .plotly,
+body.dark-mode .js-plotly-plot .svg-container,
+body.dark-mode .js-plotly-plot .main-svg {
+    background: #181818 !important;
+}
+
+/* Remove box-shadow e borda clara no modo escuro */
+body.dark-mode .left-section,
+body.dark-mode .right-section,
+body.dark-mode .latex-container {
+    box-shadow: none !important;
+    border-color: #333 !important;
+}
+
+/* Fundo dos gráficos mais claro no modo escuro */
+body.dark-mode #plot_pz,
+body.dark-mode #plot_open,
+body.dark-mode #plot_closed {
+    background: #232323 !important;
+    border-color: #444 !important;
+}
+
+/* Texto branco na seção direita no modo escuro */
+body.dark-mode .right-section,
+body.dark-mode .right-section * {
+    color: #f4f4f9 !important;
+}

@@ -8,227 +8,249 @@
     </script>
     <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
     <link rel="stylesheet" href="/static/css/slider-style.css">
-    <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            margin: 0;
-            padding: 0;
-        }
-        .left-section {
-            width: 50%;
-            padding: 20px;
-            background: #f9f9f9;
-            border-right: 1px solid #ccc;
-            margin-top: 50px;
-        }
-        .right-section {
-            width: 50%;
-            padding: 20px;
-        }
-        h3 {
-            margin-top: 20px;
-        }
-        .latex-container {
-            font-size: 1.2em;
-            background: #f7f7f7;
-            padding: 20px;
-            margin-bottom: 40px;
-        }
-        #plot_pz, #plot_open, #plot_closed {
-            width: 100%;
-            height: 400px;
-        }
-        .slider-container {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-        }
-    </style>
 </head>
 <body>
-    <div class="left-section">
-        <h3>Ajuste de Parâmetros</h3>
-        
-        <!-- Caixa de Seleção para Mostrar Malha Fechada -->
-        <div style="margin-bottom: 20px;">
-            <label for="ordem-sistema">Ordem do Sistema:</label>
-            <select id="ordem-sistema">
-                <option value="1">1ª Ordem</option>
-                <option value="2">2ª Ordem</option>
-                <option value="3">3ª Ordem</option>
-            </select>
+    <!-- Menu de hambúrguer -->
+    <div class="menu">
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
+        <div class="menu-content">
+            <label>
+                <input id="dark-mode-toggle" type="checkbox">
+                Ativar Modo Escuro
+            </label>
         </div>
-
-        <div style="display: flex; justify-content: space-between;">
-            <!-- Parâmetros da Planta -->
-            <div style="width: 48%;">
-                <h4>Parâmetros da Planta</h4>
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Polo da Planta:</span>
-                    </label>
-                    <input id="polo-slider" type="range" min="-10" max="0" step="0.001" value="-1">
-                    <input id="polo-input" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
-                </div>
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Zero da Planta:</span>
-                    </label>
-                    <input id="zero-slider" type="range" min="-10" max="10" step="0.001" value="0">
-                    <input id="zero-input" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
-                </div>
-            </div>
-
-            <!-- Parâmetros do Controlador -->
-            <div style="width: 48%;">
-                <h4>Parâmetros do Controlador</h4>
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Polo do Controlador:</span>
-                    </label>
-                    <input id="controlador-polo-slider" type="range" min="-10" max="0" step="0.001" value="-1">
-                    <input id="controlador-polo-input" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
-                </div>
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Zero do Controlador:</span>
-                    </label>
-                    <input id="controlador-zero-slider" type="range" min="-10" max="10" step="0.001" value="0">
-                    <input id="controlador-zero-input" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
-                </div>
-            </div>
-        </div>
-
-        <h3>Funções de Transferência</h3>
-        <div id="latex_planta_monomial" class="latex-container">Carregando forma monômica...</div>
-        <div id="latex_controlador" class="latex-container">Carregando controlador...</div>
     </div>
 
+    <!-- Seção Esquerda -->
+    <div class="left-section">
+        <div id="parametros-fixos">
+            <h3>Ajuste de Parâmetros</h3>
+            <!-- Seleção da Ordem do Sistema -->
+            <div style="margin-bottom: 20px;">
+                <label for="ordem-sistema">Ordem do Sistema:</label>
+                <select id="ordem-sistema">
+                    <option value="1">1ª Ordem</option>
+                    <option value="2">2ª Ordem</option>
+                    <option value="3">3ª Ordem</option>
+                </select>
+            </div>
+            <div style="margin: 10px 0;">
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" id="mostrar-malha-aberta" checked style="margin-right: 6px;">
+                    Mostrar Resposta ao Degrau (Malha Aberta)
+                </label>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <!-- Parâmetros da Planta -->
+                <div style="width: 48%;">
+                    <h4>Parâmetros da Planta</h4>
+                    <div id="planta-sliders"></div>
+                </div>
+                <!-- Parâmetros do Controlador -->
+                <div style="width: 48%;">
+                    <h4>Parâmetros do Controlador</h4>
+                    <div id="controlador-sliders"></div>
+                </div>
+            </div>
+        </div>
+        <h3>Funções de Transferência</h3>
+        <div>
+            <b>Planta:</b>
+            <div id="latex_planta_polinomial" class="latex-container">Carregando forma polinomial...</div>
+            <div id="latex_planta_fatorada" class="latex-container">Carregando forma fatorada...</div>
+        </div>
+        <div>
+            <b>Controlador:</b>
+            <div id="latex_controlador_polinomial" class="latex-container">Carregando forma polinomial...</div>
+            <div id="latex_controlador_fatorada" class="latex-container">Carregando forma fatorada...</div>
+        </div>
+    </div>
+
+    <!-- Seção Direita -->
     <div class="right-section">
         <h3>Gráficos</h3>
         <h4>Diagrama de Polos e Zeros</h4>
         <div id="plot_pz"></div>
-        <h4>Resposta ao Degrau (Malha Aberta)</h4>
-        <div id="plot_open"></div>
-        <h4 id="malha-fechada-titulo">Resposta ao Degrau (Malha Fechada)</h4>
+        <div id="malha-aberta-container">
+            <h4>Resposta ao Degrau (Malha Aberta)</h4>
+            <div id="plot_open"></div>
+        </div>
+        <h4>Resposta ao Degrau (Malha Fechada)</h4>
         <div id="plot_closed"></div>
     </div>
 
     <script>
-        // Atualiza os gráficos e as funções de transferência
-        async function atualizar() {
-            const polo = parseFloat(document.getElementById("polo-slider").value).toFixed(3);
-            const zero = parseFloat(document.getElementById("zero-slider").value).toFixed(3);
-            const controladorPolo = parseFloat(document.getElementById("controlador-polo-slider").value).toFixed(3);
-            const controladorZero = parseFloat(document.getElementById("controlador-zero-slider").value).toFixed(3);
-
-            const data = {
-                p1_1: polo,
-                z_1: zero,
-                controlador_polo: controladorPolo,
-                controlador_zero: controladorZero
-            };
-
-            try {
-                const res = await fetch('/atualizar_pagina4', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                const json = await res.json();
-
-                // Atualiza funções de transferência
-                document.getElementById("latex_planta_monomial").innerHTML = json.latex_planta_monomial || "Erro ao carregar forma monômica";
-                document.getElementById("latex_controlador").innerHTML = json.latex_controlador || "Erro ao carregar controlador";
-                if (window.MathJax) MathJax.typesetPromise();
-
-                // Atualiza gráficos
-                const plotPZData = json.plot_pz_data; // Dados do diagrama de polos e zeros
-                const plotOpenData = json.plot_open_data; // Dados da resposta ao degrau (malha aberta)
-                const plotClosedData = json.plot_closed_data; // Dados da resposta ao degrau (malha fechada)
-
-                // Renderiza o gráfico de Polos e Zeros
-                Plotly.newPlot('plot_pz', plotPZData.data, plotPZData.layout);
-
-                // Renderiza o gráfico de Resposta ao Degrau (Malha Aberta)
-                Plotly.newPlot('plot_open', plotOpenData.data, plotOpenData.layout);
-
-                // Renderiza o gráfico de Resposta ao Degrau (Malha Fechada)
-                Plotly.newPlot('plot_closed', plotClosedData.data, plotClosedData.layout);
-            } catch (error) {
-                console.error("Erro ao atualizar os gráficos:", error);
-            }
+    function atualizarSliders() {
+        const ordem = parseInt(document.getElementById("ordem-sistema").value);
+        const plantaSliders = document.getElementById("planta-sliders");
+        const controladorSliders = document.getElementById("controlador-sliders");
+        plantaSliders.innerHTML = "";
+        controladorSliders.innerHTML = "";
+        for (let i = 1; i <= ordem; i++) {
+            plantaSliders.innerHTML += `
+                <div class="slider-container">
+                    <label class="slider-label">
+                        <span>Polo ${i} da Planta:</span>
+                    </label>
+                    <input id="polo-planta-${i}" type="range" min="-10" max="0" step="0.001" value="-1">
+                    <input id="polo-planta-input-${i}" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
+                </div>
+                <div class="slider-container">
+                    <label class="slider-label">
+                        <span>Zero ${i} da Planta:</span>
+                    </label>
+                    <input id="zero-planta-${i}" type="range" min="-10" max="10" step="0.001" value="0">
+                    <input id="zero-planta-input-${i}" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
+                </div>
+            `;
+            controladorSliders.innerHTML += `
+                <div class="slider-container">
+                    <label class="slider-label">
+                        <span>Polo ${i} do Controlador:</span>
+                    </label>
+                    <input id="polo-controlador-${i}" type="range" min="-10" max="0" step="0.001" value="-1">
+                    <input id="polo-controlador-input-${i}" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
+                </div>
+                <div class="slider-container">
+                    <label class="slider-label">
+                        <span>Zero ${i} do Controlador:</span>
+                    </label>
+                    <input id="zero-controlador-${i}" type="range" min="-10" max="10" step="0.001" value="0">
+                    <input id="zero-controlador-input-${i}" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
+                </div>
+            `;
         }
+        adicionarEventosSliders(ordem);
+    }
 
-        // Adiciona eventos aos sliders para chamar a função atualizar()
-        document.getElementById("polo-slider").addEventListener("input", atualizar);
-        document.getElementById("zero-slider").addEventListener("input", atualizar);
-        document.getElementById("controlador-polo-slider").addEventListener("input", atualizar);
-        document.getElementById("controlador-zero-slider").addEventListener("input", atualizar);
+    function adicionarEventosSliders(ordem) {
+        for (let i = 1; i <= ordem; i++) {
+            // Planta
+            let sliderP = document.getElementById(`polo-planta-${i}`);
+            let inputP = document.getElementById(`polo-planta-input-${i}`);
+            sliderP.addEventListener('input', () => {
+                inputP.value = sliderP.value;
+                atualizar();
+            });
+            inputP.addEventListener('input', () => {
+                sliderP.value = inputP.value;
+                atualizar();
+            });
+            let sliderZ = document.getElementById(`zero-planta-${i}`);
+            let inputZ = document.getElementById(`zero-planta-input-${i}`);
+            sliderZ.addEventListener('input', () => {
+                inputZ.value = sliderZ.value;
+                atualizar();
+            });
+            inputZ.addEventListener('input', () => {
+                sliderZ.value = inputZ.value;
+                atualizar();
+            });
+            // Controlador
+            let sliderPC = document.getElementById(`polo-controlador-${i}`);
+            let inputPC = document.getElementById(`polo-controlador-input-${i}`);
+            sliderPC.addEventListener('input', () => {
+                inputPC.value = sliderPC.value;
+                atualizar();
+            });
+            inputPC.addEventListener('input', () => {
+                sliderPC.value = inputPC.value;
+                atualizar();
+            });
+            let sliderZC = document.getElementById(`zero-controlador-${i}`);
+            let inputZC = document.getElementById(`zero-controlador-input-${i}`);
+            sliderZC.addEventListener('input', () => {
+                inputZC.value = sliderZC.value;
+                atualizar();
+            });
+            inputZC.addEventListener('input', () => {
+                sliderZC.value = inputZC.value;
+                atualizar();
+            });
+        }
+    }
 
-        // Atualiza os valores exibidos ao alterar os sliders
-        document.getElementById("polo-slider").addEventListener("input", (event) => {
-            document.getElementById("polo-input").value = parseFloat(event.target.value).toFixed(3);
-        });
-
-        document.getElementById("zero-slider").addEventListener("input", (event) => {
-            document.getElementById("zero-input").value = parseFloat(event.target.value).toFixed(3);
-        });
-
-        document.getElementById("controlador-polo-slider").addEventListener("input", (event) => {
-            document.getElementById("controlador-polo-input").value = parseFloat(event.target.value).toFixed(3);
-        });
-
-        document.getElementById("controlador-zero-slider").addEventListener("input", (event) => {
-            document.getElementById("controlador-zero-input").value = parseFloat(event.target.value).toFixed(3);
-        });
-
-        // Atualiza os sliders ao alterar os valores nas caixas de texto
-        document.getElementById("polo-input").addEventListener("input", (event) => {
-            document.getElementById("polo-slider").value = parseFloat(event.target.value).toFixed(3);
-            atualizar();
-        });
-
-        document.getElementById("zero-input").addEventListener("input", (event) => {
-            document.getElementById("zero-slider").value = parseFloat(event.target.value).toFixed(3);
-            atualizar();
-        });
-
-        document.getElementById("controlador-polo-input").addEventListener("input", (event) => {
-            document.getElementById("controlador-polo-slider").value = parseFloat(event.target.value).toFixed(3);
-            atualizar();
-        });
-
-        document.getElementById("controlador-zero-input").addEventListener("input", (event) => {
-            document.getElementById("controlador-zero-slider").value = parseFloat(event.target.value).toFixed(3);
-            atualizar();
-        });
-
-        // Exibe ou oculta o gráfico de malha fechada
-        document.getElementById("mostrar-malha-fechada").addEventListener("change", (event) => {
-            const mostrar = event.target.checked;
-            const tituloMalhaFechada = document.getElementById("malha-fechada-titulo");
-            const graficoMalhaFechada = document.getElementById("plot_closed");
-
-            if (mostrar) {
-                tituloMalhaFechada.style.display = "block";
-                graficoMalhaFechada.style.display = "block";
-            } else {
-                tituloMalhaFechada.style.display = "none";
-                graficoMalhaFechada.style.display = "none";
-            }
-        });
-
-        window.onload = () => {
-            atualizar();
+    async function atualizar() {
+        const ordem = parseInt(document.getElementById("ordem-sistema").value);
+        const polosPlanta = [];
+        const zerosPlanta = [];
+        const polosControlador = [];
+        const zerosControlador = [];
+        for (let i = 1; i <= ordem; i++) {
+            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-${i}`).value));
+            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-${i}`).value));
+            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-${i}`).value));
+            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-${i}`).value));
+        }
+        const data = {
+            ordem: ordem,
+            polos_planta: polosPlanta,
+            zeros_planta: zerosPlanta,
+            polos_controlador: polosControlador,
+            zeros_controlador: zerosControlador
         };
+        const res = await fetch('/atualizar_pagina4', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        document.getElementById("latex_planta_polinomial").innerHTML = json.latex_planta_polinomial || "Erro ao carregar forma polinomial";
+        document.getElementById("latex_planta_fatorada").innerHTML = json.latex_planta_fatorada || "Erro ao carregar forma fatorada";
+        document.getElementById("latex_controlador_polinomial").innerHTML = json.latex_controlador_polinomial || "Erro ao carregar forma polinomial";
+        document.getElementById("latex_controlador_fatorada").innerHTML = json.latex_controlador_fatorada || "Erro ao carregar forma fatorada";
+        if (window.MathJax) MathJax.typesetPromise();
+
+        // Plota os gráficos com o layout e cores já enviados pelo backend
+        Plotly.newPlot('plot_pz', json.plot_pz_data.data, json.plot_pz_data.layout);
+        Plotly.newPlot('plot_open', json.plot_open_data.data, json.plot_open_data.layout);
+        Plotly.newPlot('plot_closed', json.plot_closed_data.data, json.plot_closed_data.layout);
+
+        // Mostra ou esconde conforme a caixa de seleção
+        const mostrar = document.getElementById('mostrar-malha-aberta').checked;
+        document.getElementById('plot_open').style.display = mostrar ? '' : 'none';
+        document.getElementById('malha-aberta-container').style.display = mostrar ? '' : 'none';
+    }
+
+    document.getElementById("ordem-sistema").addEventListener("change", () => {
+        atualizarSliders();
+        atualizar();
+    });
+    window.onload = () => {
+        atualizarSliders();
+        atualizar();
+    };
+
+    // Mostra ou esconde o gráfico de malha aberta conforme a caixa de seleção
+    document.getElementById('mostrar-malha-aberta').addEventListener('change', function() {
+        const plotOpen = document.getElementById('plot_open');
+        plotOpen.style.display = this.checked ? '' : 'none';
+    });
+    document.getElementById('mostrar-malha-aberta').addEventListener('change', function() {
+        const container = document.getElementById('malha-aberta-container');
+        container.style.display = this.checked ? '' : 'none';
+    });
+
+    // Menu e modo escuro (mantém igual)
+    const menu = document.querySelector('.menu');
+    const menuContent = document.querySelector('.menu-content');
+
+    menu.addEventListener('mouseenter', () => {
+        menuContent.classList.add('show');
+        menu.classList.add('open');
+    });
+    menu.addEventListener('mouseleave', () => {
+        menuContent.classList.remove('show');
+        menu.classList.remove('open');
+    });
+
+    document.getElementById('dark-mode-toggle').addEventListener('change', (event) => {
+        document.body.classList.toggle('dark-mode', event.target.checked);
+        atualizar(); // Redesenha os gráficos com o layout correto
+    });
+
     </script>
 </body>
 </html>
