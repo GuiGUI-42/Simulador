@@ -20,6 +20,7 @@
                 <input id="dark-mode-toggle" type="checkbox">
                 Ativar Modo Escuro
             </label>
+            <button id="abrir-feedback" style="margin-top:10px;">Enviar Feedback</button>
         </div>
     </div>
 
@@ -79,6 +80,15 @@
         </div>
         <h4>Resposta ao Degrau (Malha Fechada)</h4>
         <div id="plot_closed"></div>
+    </div>
+
+    <div id="modal-feedback" class="modal">
+        <div class="modal-content">
+            <span class="close" id="fechar-modal">&times;</span>
+            <h3>Envie seu Feedback</h3>
+            <textarea id="feedback-texto" rows="6" style="width: 100%;" placeholder="Digite seu feedback aqui..."></textarea>
+            <button id="enviar-feedback">Enviar</button>
+        </div>
     </div>
 
     <script>
@@ -250,6 +260,35 @@
         document.body.classList.toggle('dark-mode', event.target.checked);
         atualizar(); // Redesenha os gráficos com o layout correto
     });
+
+    // Feedback modal
+    document.getElementById('abrir-feedback').onclick = function() {
+        document.getElementById('modal-feedback').style.display = 'block';
+    };
+    document.getElementById('fechar-modal').onclick = function() {
+        document.getElementById('modal-feedback').style.display = 'none';
+    };
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('modal-feedback')) {
+            document.getElementById('modal-feedback').style.display = 'none';
+        }
+    };
+    // Exemplo de envio (você pode adaptar para enviar ao backend)
+    document.getElementById('enviar-feedback').onclick = async function() {
+        const texto = document.getElementById('feedback-texto').value;
+        const res = await fetch('/enviar_feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feedback: texto })
+        });
+        if (res.ok) {
+            alert('Feedback enviado com sucesso!');
+            document.getElementById('modal-feedback').style.display = 'none';
+            document.getElementById('feedback-texto').value = '';
+        } else {
+            alert('Erro ao enviar feedback.');
+        }
+    };
 
     </script>
 </body>

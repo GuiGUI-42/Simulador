@@ -9,6 +9,8 @@ import io
 import base64
 import control as ctl
 import json 
+import smtplib
+from email.mime.text import MIMEText
 
 app = Flask(__name__)
 
@@ -282,6 +284,29 @@ def atualizar_pagina4():
         "latex_controlador_monic": latex_controlador_monic,
         "latex_controlador_fatorada": latex_controlador_fatorada
     })
+
+@app.route('/enviar_feedback', methods=['POST'])
+def enviar_feedback():
+    data = request.get_json()
+    texto = data.get('feedback', '')
+    # Configurações do seu e-mail
+    remetente = 'syscoufsc@gmail.com'
+    senha = 'jvey wybi xcnm znko'  # Use senha de app para Gmail
+    destinatario = 'syscoufsc@gmail.com'  # Ou outro e-mail de destino
+
+    msg = MIMEText(texto)
+    msg['Subject'] = 'Feedback do Simulador'
+    msg['From'] = remetente
+    msg['To'] = destinatario
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(remetente, senha)
+            server.sendmail(remetente, destinatario, msg.as_string())
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        print("Erro ao enviar feedback:", e)
+        return jsonify({'status': 'erro', 'mensagem': str(e)}), 500
 
 def latex_poly(coeffs, var='s'):
     coeffs = np.array(coeffs, dtype=float)

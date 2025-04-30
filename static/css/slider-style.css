@@ -1,6 +1,7 @@
 /* Estilo para os sliders */
 input[type="range"] {
     -webkit-appearance: none; /* Remove o estilo padrão do navegador */
+    appearance: none; /* Define a propriedade padrão para compatibilidade */
     width: 70%; /* Ajusta a largura */
     height: 10px; /* Altura do slider */
     border-radius: 5px; /* Bordas arredondadas */
@@ -372,4 +373,31 @@ body.dark-mode #plot_closed {
 body.dark-mode .right-section,
 body.dark-mode .right-section * {
     color: #f4f4f9 !important;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0; top: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.4);
+}
+.modal-content {
+    background: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 400px;
+    position: relative;
+}
+.close {
+    position: absolute;
+    right: 15px; top: 10px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+body.dark-mode .modal-content {
+    background: #232323;
+    color: #f4f4f9;
 }
