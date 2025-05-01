@@ -188,6 +188,7 @@ def atualizar_pagina4():
     zeros_planta = data.get("zeros_planta", [0])
     polos_controlador = data.get("polos_controlador", [-1])
     zeros_controlador = data.get("zeros_controlador", [0])
+    ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
     # Filtra zeros realmente diferentes de zero
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
@@ -196,6 +197,7 @@ def atualizar_pagina4():
 
     zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
     num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
+    num_controlador = ganho_controlador * num_controlador  # Aplica o ganho
     den_controlador = np.poly(polos_controlador)
 
     G_planta = ctl.tf(num_planta, den_planta)
@@ -293,6 +295,52 @@ def atualizar_pagina4():
         "latex_controlador_polinomial": latex_controlador_polinomial,
         "latex_controlador_monic": latex_controlador_monic,
         "latex_controlador_fatorada": latex_controlador_fatorada
+    })
+
+@app.route('/atualizar_pagina2', methods=['POST'])
+def atualizar_pagina2():
+    data = request.get_json()
+    polos_planta = data.get("polos_planta", [-1])
+    zeros_planta = data.get("zeros_planta", [0])
+
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
+    den_planta = np.poly(polos_planta)
+
+    G_planta = ctl.tf(num_planta, den_planta)
+
+    # Polos e zeros
+    zeros = np.roots(num_planta)
+    poles = np.roots(den_planta)
+    plot_pz_data = {
+        "data": [
+            {"x": np.real(zeros).tolist(), "y": np.imag(zeros).tolist(), "mode": "markers", "name": "Zeros"},
+            {"x": np.real(poles).tolist(), "y": np.imag(poles).tolist(), "mode": "markers", "name": "Polos"}
+        ],
+        "layout": {"title": "Diagrama de Polos e Zeros", "xaxis": {"title": "Re"}, "yaxis": {"title": "Im"}}
+    }
+
+    # Resposta ao degrau (Malha Aberta)
+    T_open, yout_open = ctl.step_response(G_planta)
+    plot_open_data = {
+        "data": [
+            {"x": T_open.tolist(), "y": yout_open.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Aberta)"}
+        ],
+        "layout": {"title": "Resposta ao Degrau (Malha Aberta)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
+    }
+
+    latex_planta_polinomial = (
+        f"\\[ G(s) = \\frac{{{latex_poly(num_planta, 's')}}}{{{latex_poly(den_planta, 's')}}} \\]"
+    )
+    latex_planta_fatorada = (
+        f"\\[ G(s) = \\frac{{{latex_factored(zeros_planta, 's')}}}{{{latex_factored(polos_planta, 's')}}} \\]"
+    )
+
+    return jsonify({
+        "latex_planta_polinomial": latex_planta_polinomial,
+        "latex_planta_fatorada": latex_planta_fatorada,
+        "plot_pz_data": plot_pz_data,
+        "plot_open_data": plot_open_data
     })
 
 @app.route('/enviar_feedback', methods=['POST'])

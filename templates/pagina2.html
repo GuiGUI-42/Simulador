@@ -1,69 +1,233 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Página 2</title>
+    <meta charset="UTF-8">
+    <title>Simulador de Controle - Malha Aberta</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/slider-style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async
-        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body { font-family: sans-serif; }
-        .header { background: #f4f4f4; padding: 10px; text-align: center; }
-        label { display: block; margin-top: 8px; }
-        .section { margin-bottom: 20px; }
+        .latex-container { margin: 8px 0; }
+        .section { margin-bottom: 32px; }
+        .slider-container {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-label {
+            min-width: 70px;
+            margin-right: 8px;
+        }
+        .menu-link {
+            display: block;
+            margin: 12px 0 0 0;
+            padding: 8px 16px;
+            background: linear-gradient(90deg, #2196f3 0%, #4caf50 100%);
+            color: #fff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 2px 6px rgba(33,150,243,0.08);
+        }
+        .menu-link:hover {
+            background: linear-gradient(90deg, #4caf50 0%, #2196f3 100%);
+            color: #fff !important;
+            box-shadow: 0 4px 12px rgba(33,150,243,0.18);
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="/">Página Principal</a> | <a href="/pagina2">Página 2</a>| <a href="/pagina3">Página 3</a>  | <a href="/pagina4">Página 4</a>
-       
+    <!-- Menu de hambúrguer -->
+    <div class="menu">
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
+        <div class="menu-icon"></div>
+        <div class="menu-content">
+            <label>
+                <input id="dark-mode-toggle" type="checkbox">
+                Ativar Modo Escuro
+            </label>
+            <a href="/pagina4" class="menu-link">Simulador Completo</a>
+            <button id="abrir-feedback" style="margin-top:10px;">Enviar Feedback</button>
+        </div>
     </div>
 
-    <h1>Configuração da Planta e Gráfico de Bode</h1>
-
-    <div class="section">
-        <label>Polo:</label>
-        <input type="range" id="p1_1" min="-10" max="10" step="0.1" value="-1" oninput="sincronizarValor('p1_1', 'p1_1_num', this.value)">
-        <input type="number" id="p1_1_num" min="-10" max="10" step="0.1" value="-1" oninput="sincronizarValor('p1_1', 'p1_1_num', this.value)">
-
-        <label>Zero:</label>
-        <input type="range" id="z_1" min="-10" max="10" step="0.1" value="0" oninput="sincronizarValor('z_1', 'z_1_num', this.value)">
-        <input type="number" id="z_1_num" min="-10" max="10" step="0.1" value="0" oninput="sincronizarValor('z_1', 'z_1_num', this.value)">
+    <div class="left-section">
+        <div id="parametros-fixos">
+            <h3>Ajuste de Parâmetros</h3>
+            <div style="margin-bottom: 20px;">
+                <label for="ordem-sistema">Ordem do Sistema:</label>
+                <select id="ordem-sistema"></select>
+            </div>
+            <div>
+                <h4>Parâmetros da Planta</h4>
+                <div id="planta-sliders"></div>
+            </div>
+        </div>
+        <h3>Funções de Transferência</h3>
+        <div>
+            <b>Planta:</b>
+            <div id="latex_planta_polinomial" class="latex-container">Carregando forma polinomial...</div>
+            <div id="latex_planta_fatorada" class="latex-container">Carregando forma fatorada...</div>
+        </div>
+    </div>
+    <div class="right-section">
+        <h3>Gráficos</h3>
+        <h4>Diagrama de Polos e Zeros</h4>
+        <div id="plot_pz"></div>
+        <div id="malha-aberta-container">
+            <h4>Resposta ao Degrau (Malha Aberta)</h4>
+            <div id="plot_open"></div>
+        </div>
     </div>
 
-    <div class="section">
-        <h3>Gráfico de Bode</h3>
-        <img id="bode_plot" src="" style="max-width: 100%; border: 1px solid #ccc;">
+    <!-- Modal de Feedback -->
+    <div id="modal-feedback" class="modal">
+        <div class="modal-content">
+            <span class="close" id="fechar-modal">&times;</span>
+            <h3>Envie seu Feedback</h3>
+            <textarea id="feedback-texto" rows="6" style="width: 100%;" placeholder="Digite seu feedback aqui..."></textarea>
+            <button id="enviar-feedback">Enviar</button>
+        </div>
     </div>
 
     <script>
-        async function atualizarBode() {
-            const data = {
-                p1_1: document.getElementById("p1_1").value,
-                z_1: document.getElementById("z_1").value
-            };
-
-            const res = await fetch('/atualizar_bode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            const json = await res.json();
-
-            // Atualiza o gráfico de Bode
-            document.getElementById("bode_plot").src = json.bode_url;
+    // --- Inicialização dos sliders da planta ---
+    function criarSlidersPlanta(ordem) {
+        const container = document.getElementById('planta-sliders');
+        container.innerHTML = '';
+        for (let i = 1; i <= ordem; i++) {
+            container.innerHTML += `
+                <div class="slider-container">
+                    <label class="slider-label">Polo ${i}:</label>
+                    <input type="range" id="polo-planta-${i}" min="-10" max="1" step="0.01" value="-1">
+                    <input type="number" id="polo-planta-input-${i}" min="-10" max="1" step="0.01" value="-1" style="width: 60px;">
+                </div>
+                <div class="slider-container">
+                    <label class="slider-label">Zero ${i}:</label>
+                    <input type="range" id="zero-planta-${i}" min="-10" max="10" step="0.01" value="0">
+                    <input type="number" id="zero-planta-input-${i}" min="-10" max="10" step="0.01" value="0" style="width: 60px;">
+                </div>
+            `;
         }
-
-        function sincronizarValor(sliderId, numberId, valor) {
-            document.getElementById(sliderId).value = valor;
-            document.getElementById(numberId).value = valor;
-            atualizarBode();
+        // Sincronização dos sliders e inputs
+        for (let i = 1; i <= ordem; i++) {
+            const sliderP = document.getElementById(`polo-planta-${i}`);
+            const inputP = document.getElementById(`polo-planta-input-${i}`);
+            sliderP.oninput = () => { inputP.value = sliderP.value; atualizar(); };
+            inputP.oninput = () => { sliderP.value = inputP.value; atualizar(); };
+            const sliderZ = document.getElementById(`zero-planta-${i}`);
+            const inputZ = document.getElementById(`zero-planta-input-${i}`);
+            sliderZ.oninput = () => { inputZ.value = sliderZ.value; atualizar(); };
+            inputZ.oninput = () => { sliderZ.value = inputZ.value; atualizar(); };
         }
+    }
 
-        window.onload = () => {
-            atualizarBode();
+    // --- Ordem do sistema ---
+    function criarSelectOrdem() {
+        const select = document.getElementById('ordem-sistema');
+        select.innerHTML = '';
+        for (let i = 1; i <= 3; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `${i}ª ordem`;
+            select.appendChild(opt);
+        }
+        select.value = 1;
+        select.onchange = () => {
+            criarSlidersPlanta(Number(select.value));
+            atualizar();
         };
+    }
+
+    // --- Atualização dos gráficos e LaTeX ---
+    async function atualizar() {
+        const ordem = parseInt(document.getElementById("ordem-sistema").value);
+        const polosPlanta = [];
+        const zerosPlanta = [];
+        for (let i = 1; i <= ordem; i++) {
+            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-${i}`).value));
+            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-${i}`).value));
+        }
+        const data = {
+            ordem: ordem,
+            polos_planta: polosPlanta,
+            zeros_planta: zerosPlanta
+        };
+        const res = await fetch('/atualizar_pagina2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+
+        // Atualiza LaTeX
+        document.getElementById('latex_planta_polinomial').innerHTML = result.latex_planta_polinomial;
+        document.getElementById('latex_planta_fatorada').innerHTML = result.latex_planta_fatorada;
+        if (window.MathJax) MathJax.typesetPromise();
+
+        // Atualiza gráficos
+        Plotly.newPlot('plot_pz', result.plot_pz_data.data, result.plot_pz_data.layout);
+        Plotly.newPlot('plot_open', result.plot_open_data.data, result.plot_open_data.layout);
+    }
+
+    // --- Inicialização ---
+    window.onload = function() {
+        criarSelectOrdem();
+        criarSlidersPlanta(1);
+        atualizar();
+    };
+
+    // Menu e modo escuro (igual página 4)
+    const menu = document.querySelector('.menu');
+    const menuContent = document.querySelector('.menu-content');
+    menu.addEventListener('mouseenter', () => {
+        menuContent.classList.add('show');
+        menu.classList.add('open');
+    });
+    menu.addEventListener('mouseleave', () => {
+        menuContent.classList.remove('show');
+        menu.classList.remove('open');
+    });
+
+    document.getElementById('dark-mode-toggle').addEventListener('change', (event) => {
+        document.body.classList.toggle('dark-mode', event.target.checked);
+        atualizar(); // Redesenha os gráficos com o layout correto
+    });
+
+    // Feedback modal
+    document.getElementById('abrir-feedback').onclick = function() {
+        document.getElementById('modal-feedback').style.display = 'block';
+    };
+    document.getElementById('fechar-modal').onclick = function() {
+        document.getElementById('modal-feedback').style.display = 'none';
+    };
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('modal-feedback')) {
+            document.getElementById('modal-feedback').style.display = 'none';
+        }
+    };
+    document.getElementById('enviar-feedback').onclick = async function() {
+        const texto = document.getElementById('feedback-texto').value;
+        const res = await fetch('/enviar_feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feedback: texto })
+        });
+        if (res.ok) {
+            alert('Feedback enviado com sucesso!');
+            document.getElementById('modal-feedback').style.display = 'none';
+            document.getElementById('feedback-texto').value = '';
+        } else {
+            alert('Erro ao enviar feedback.');
+        }
+    };
     </script>
 </body>
 </html>

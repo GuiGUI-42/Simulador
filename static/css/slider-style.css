@@ -401,3 +401,24 @@ body.dark-mode .modal-content {
     background: #232323;
     color: #f4f4f9;
 }
+.menu-link {
+    display: block;
+    margin: 12px 0 0 0;
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #2196f3 0%, #4caf50 100%);
+    color: #fff !important;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: bold;
+    text-align: center;
+    transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 2px 6px rgba(33,150,243,0.08);
+}
+.menu-link:hover {
+    background: linear-gradient(90deg, #4caf50 0%, #2196f3 100%);
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(33,150,243,0.18);
+    text-decoration: none;
+}
+
+
