@@ -76,6 +76,17 @@
     </div>
 
     <div class="section">
+        <h3>Perturbação (arraste o ponto)</h3>
+        <div id="slider2d" style="position: relative; width: 100%; max-width: 800px; height: 120px; background: #eee; border-radius: 8px; margin-bottom: 16px;">
+            <div id="slider2d-point"
+                style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background: lime; border: 2px solid #333; cursor: grab;">
+            </div>
+            <span style="position:absolute; left:5px; top:0;">Tempo: <span id="slider2d-t"></span></span>
+            <span style="position:absolute; right:5px; top:0;">Amplitude: <span id="slider2d-a"></span></span>
+        </div>
+    </div>
+
+    <div class="section">
         <h3>Funções de Transferência</h3>
         <div id="latex_planta" style="font-size: 1.2em; background: #eee; padding: 10px;"></div>
         <div id="latex_controlador" style="font-size: 1.2em; background: #eee; padding: 10px;"></div>
@@ -85,7 +96,7 @@
 
     <div class="section">
         <h3>Gráficos</h3>
-        <div id="plot" style="max-width: 100%; height: 400px;"></div>
+        <div id="plot" style="width: 100%; max-width: 800px; height: 400px; max-width: 100%;"></div>
     </div>
 
     <script>
@@ -204,6 +215,78 @@
             document.getElementById(sliderId).value = valor;
             document.getElementById(numberId).value = valor;
         }
+
+        const slider2d = document.getElementById('slider2d');
+        const point = document.getElementById('slider2d-point');
+        const tLabel = document.getElementById('slider2d-t');
+        const aLabel = document.getElementById('slider2d-a');
+
+        // Defina os limites do slider
+        const tMin = 0, tMax = 50;
+        const aMin = -2, aMax = 2;
+        const width = 800, height = 120; // igual ao slider2d
+
+        // Inicial
+        let t_perturb = 20, amp_perturb = 0.5;
+
+        function getSlider2dSize() {
+            const rect = slider2d.getBoundingClientRect();
+            return { width: rect.width, height: 120 }; // altura fixa
+        }
+
+        // Atualiza posição do ponto e labels
+        function updateSlider2d() {
+            const { width, height } = getSlider2dSize();
+            const x = ((t_perturb - tMin) / (tMax - tMin)) * (width - 18);
+            const y = ((aMax - amp_perturb) / (aMax - aMin)) * (height - 18);
+            point.style.left = x + "px";
+            point.style.top = y + "px";
+            tLabel.textContent = t_perturb.toFixed(2);
+            aLabel.textContent = amp_perturb.toFixed(2);
+
+            // Atualiza os inputs ocultos (para integração com o backend)
+            document.getElementById('t_perturb').value = t_perturb;
+            document.getElementById('t_perturb_num').value = t_perturb;
+            document.getElementById('amp_perturb').value = amp_perturb;
+            document.getElementById('amp_perturb_num').value = amp_perturb;
+        }
+
+        // Drag & drop
+        let dragging = false;
+        point.onmousedown = function(e) {
+            dragging = true;
+            document.body.style.userSelect = "none";
+        };
+        document.onmouseup = function() {
+            dragging = false;
+            document.body.style.userSelect = "";
+        };
+        document.onmousemove = function(e) {
+            if (!dragging) return;
+            const rect = slider2d.getBoundingClientRect();
+            const width = rect.width, height = rect.height;
+            let x = e.clientX - rect.left - 9;
+            let y = e.clientY - rect.top - 9;
+            x = Math.max(0, Math.min(x, width - 18));
+            y = Math.max(0, Math.min(y, height - 18));
+            t_perturb = tMin + (x / (width - 18)) * (tMax - tMin);
+            amp_perturb = aMax - (y / (height - 18)) * (aMax - aMin);
+            updateSlider2d();
+            atualizar();
+        };
+
+        // Sincroniza se mudar por outros meios
+        function setSlider2d(t, a) {
+            t_perturb = Math.max(tMin, Math.min(t, tMax));
+            amp_perturb = Math.max(aMin, Math.min(a, aMax));
+            updateSlider2d();
+        }
+        window.setSlider2d = setSlider2d;
+
+        // Inicializa
+        updateSlider2d();
+
+        window.addEventListener('resize', updateSlider2d);
     </script>
 </body>
 </html>
