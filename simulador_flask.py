@@ -79,20 +79,30 @@ def atualizar():
     axs[1].set_title("Resposta ao Degrau (Malha Aberta)")
     axs[1].grid(True)
 
-    # Salva os gráficos em base64
-    buf = io.BytesIO()
-    plt.tight_layout()
-    plt.savefig(buf, format="png")
-    plt.close(fig)
-    buf.seek(0)
-    plot_base64 = base64.b64encode(buf.read()).decode("utf-8")
+    t_perturb = float(data.get("t_perturb", 20))
+    amp_perturb = float(data.get("amp_perturb", 0.5))
+
+    # Resposta ao degrau (sem perturbação)
+    T, yout_step = ctl.step_response(G)
+
+    # Resposta ao degrau + perturbação
+    T_long = np.linspace(0, 50, 1000)
+    u = np.ones_like(T_long)
+    u[T_long >= t_perturb] += amp_perturb
+    T_resp, yout_perturb = ctl.forced_response(G, T_long, u)
 
     return jsonify({
         "latex_planta": latex_planta,
         "latex_controlador": latex_controlador,
         "latex_open": latex_open,
         "latex_closed": latex_closed,
-        "plot_url": f"data:image/png;base64,{plot_base64}"
+        "plot_data": {
+            "T": T_long.tolist(),
+            "yout_step": np.interp(T_long, T, yout_step).tolist(),
+            "yout_perturb": yout_perturb.tolist(),
+            "t_perturb": t_perturb,
+            "amp_perturb": amp_perturb
+        }
     })
 
 @app.route('/atualizar_bode', methods=['POST'])

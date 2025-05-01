@@ -6,6 +6,7 @@
     <script id="MathJax-script" async
         src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body { font-family: sans-serif; }
         .header { background: #f4f4f4; padding: 10px; text-align: center; }
@@ -65,6 +66,16 @@
     </div>
 
     <div class="section">
+        <h3>Perturbação</h3>
+        <label>Tempo da Perturbação:</label>
+        <input type="range" id="t_perturb" min="0" max="50" step="0.1" value="20" oninput="sincronizarValor('t_perturb', 't_perturb_num', this.value)">
+        <input type="number" id="t_perturb_num" min="0" max="50" step="0.1" value="20" oninput="sincronizarValor('t_perturb', 't_perturb_num', this.value)">
+        <label>Amplitude da Perturbação:</label>
+        <input type="range" id="amp_perturb" min="-2" max="2" step="0.01" value="0.5" oninput="sincronizarValor('amp_perturb', 'amp_perturb_num', this.value)">
+        <input type="number" id="amp_perturb_num" min="-2" max="2" step="0.01" value="0.5" oninput="sincronizarValor('amp_perturb', 'amp_perturb_num', this.value)">
+    </div>
+
+    <div class="section">
         <h3>Funções de Transferência</h3>
         <div id="latex_planta" style="font-size: 1.2em; background: #eee; padding: 10px;"></div>
         <div id="latex_controlador" style="font-size: 1.2em; background: #eee; padding: 10px;"></div>
@@ -74,7 +85,7 @@
 
     <div class="section">
         <h3>Gráficos</h3>
-        <img id="plot" src="" style="max-width: 100%; border: 1px solid #ccc;">
+        <div id="plot" style="max-width: 100%; height: 400px;"></div>
     </div>
 
     <script>
@@ -86,7 +97,9 @@
                 z_1: document.getElementById("z_1")?.value || 0,
                 p1_2: document.getElementById("p1_2")?.value || -1,
                 p2_2: document.getElementById("p2_2")?.value || -2,
-                z_2: document.getElementById("z_2")?.value || 0
+                z_2: document.getElementById("z_2")?.value || 0,
+                t_perturb: document.getElementById("t_perturb")?.value || 20,
+                amp_perturb: document.getElementById("amp_perturb")?.value || 0.5
             };
         
             const res = await fetch('/atualizar', {
@@ -104,8 +117,67 @@
             document.getElementById("latex_closed").innerHTML = json.latex_closed || "Erro ao carregar malha fechada";
             if (window.MathJax) MathJax.typesetPromise();
         
-            // Atualiza gráficos
-            document.getElementById("plot").src = json.plot_url || "";
+            // Substitua a parte de atualizar gráficos por:
+            const plotDiv = document.getElementById("plot");
+            const plotData = json.plot_data;
+
+            const traceStep = {
+                x: plotData.T,
+                y: plotData.yout_step,
+                mode: 'lines',
+                name: 'Degrau'
+            };
+            const tracePerturb = {
+                x: plotData.T,
+                y: plotData.yout_perturb,
+                mode: 'lines',
+                name: 'Com Perturbação',
+                line: {color: 'green'}
+            };
+            const markerPerturb = {
+                x: [plotData.t_perturb],
+                y: [plotData.yout_perturb[plotData.T.findIndex(t => t >= plotData.t_perturb)]],
+                mode: 'markers',
+                marker: {color: 'lime', size: 14, symbol: 'circle'},
+                name: 'Perturbação',
+                customdata: [plotData.amp_perturb],
+                draggable: true // só para referência, Plotly não usa isso diretamente
+            };
+
+            Plotly.newPlot(plotDiv, [traceStep, tracePerturb, markerPerturb], {
+                title: "Resposta ao Degrau (Malha Aberta)",
+                xaxis: {title: "Tempo (s)"},
+                yaxis: {title: "Amplitude"},
+                dragmode: 'closest'
+            });
+
+            plotDiv.on('plotly_relayout', function(eventdata) {
+                // Detecta se o usuário moveu o marcador (x[2] e y[2])
+                if (eventdata['x[2]'] !== undefined && eventdata['y[2]'] !== undefined) {
+                    const novo_t = eventdata['x[2]'];
+                    const nova_amp = eventdata['y[2]'];
+                    // Atualize os inputs e envie para o backend
+                    document.getElementById('t_perturb').value = novo_t;
+                    document.getElementById('t_perturb_num').value = novo_t;
+                    document.getElementById('amp_perturb').value = nova_amp;
+                    document.getElementById('amp_perturb_num').value = nova_amp;
+                    atualizar();
+                }
+            });
+
+            plotDiv.on('plotly_click', function(eventdata) {
+                // Só move se clicar no gráfico (não na legenda)
+                if (eventdata.points && eventdata.points.length > 0) {
+                    const novo_t = eventdata.points[0].x;
+                    const nova_amp = eventdata.points[0].y;
+                    // Atualiza os inputs
+                    document.getElementById('t_perturb').value = novo_t;
+                    document.getElementById('t_perturb_num').value = novo_t;
+                    document.getElementById('amp_perturb').value = nova_amp;
+                    document.getElementById('amp_perturb_num').value = nova_amp;
+                    atualizar();
+                }
+            });
         }
     
         function atualizarCampos() {
