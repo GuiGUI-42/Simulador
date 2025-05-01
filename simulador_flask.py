@@ -190,6 +190,9 @@ def atualizar_pagina4():
     zeros_controlador = data.get("zeros_controlador", [0])
     ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
+    t_perturb_fechada = float(data.get("t_perturb_fechada", 20))
+    amp_perturb_fechada = float(data.get("amp_perturb_fechada", 0.5))
+
     # Filtra zeros realmente diferentes de zero
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
     num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
@@ -238,12 +241,24 @@ def atualizar_pagina4():
 
     # Resposta ao degrau (Malha Fechada - planta e controlador)
     T_closed, yout_closed = ctl.step_response(G_closed)
+    T = np.linspace(0, 50, 1000)
+    u = np.ones_like(T)
+    u[T >= t_perturb_fechada] += amp_perturb_fechada
+    _, yout_perturb = ctl.forced_response(G_closed, T, u)
+
     plot_closed_data = {
         "data": [
-            {"x": T_closed.tolist(), "y": yout_closed.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Fechada)"}
+            {"x": T.tolist(), "y": yout_perturb.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Fechada)"}
         ],
         "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
     }
+
+    # Supondo que Gmf seja a função de transferência em malha fechada
+    T = np.linspace(0, 50, 1000)
+    u = np.ones_like(T)
+    u[T >= t_perturb_fechada] += amp_perturb_fechada
+    _, yout_perturb = ctl.forced_response(G_closed, T, u)
+    # Use yout_perturb para o gráfico plot_closed_data
 
     # Gere as strings LaTeX para as FTs
     ordem_den_planta = len(den_planta) - 1

@@ -421,4 +421,92 @@ body.dark-mode .modal-content {
     text-decoration: none;
 }
 
+/* Slider 2D Perturbação (Malha Fechada) */
+.slider2d-box {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    height: 120px;
+    background: repeating-linear-gradient(
+        135deg,
+        #f0f0f0,
+        #f0f0f0 10px,
+        #e0e0e0 10px,
+        #e0e0e0 20px
+    );
+    border: 3px dashed #2196f3;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(33,150,243,0.10);
+    transition: box-shadow 0.2s, border-color 0.2s;
+    overflow: visible;
+}
+.slider2d-box:hover {
+    border-color: #4caf50;
+    box-shadow: 0 4px 18px rgba(76,175,80,0.18);
+}
+#slider2d-point-fechada {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: orange;
+    border: 3px solid #333;
+    cursor: grab;
+    box-shadow: 0 2px 8px rgba(255,140,0,0.18);
+    z-index: 10;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+#slider2d-point-fechada:active {
+    border-color: #2196f3;
+    box-shadow: 0 4px 16px rgba(33,150,243,0.18);
+}
+.slider2d-label {
+    position: absolute;
+    top: 8px;
+    font-size: 1em;
+    background: rgba(255,255,255,0.85);
+    padding: 2px 8px;
+    border-radius: 6px;
+    z-index: 20;
+}
+.slider2d-label-left {
+    left: 10px;
+}
+.slider2d-label-right {
+    right: 10px;
+}
+.slider2d-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    font-size: 0.95em;
+    color: #2196f3;
+    background: rgba(255,255,255,0.85);
+    padding: 2px 10px;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 20;
+    font-style: italic;
+}
+body.dark-mode .slider2d-box {
+    background: repeating-linear-gradient(
+        135deg,
+        #232323,
+        #232323 10px,
+        #181818 10px,
+        #181818 20px
+    );
+    border-color: #4caf50;
+}
+body.dark-mode .slider2d-hint,
+body.dark-mode .slider2d-label {
+    background: rgba(24,24,24,0.95);
+    color: #4caf50;
+}
+body.dark-mode #slider2d-point-fechada {
+    border-color: #4caf50;
+}
+
 

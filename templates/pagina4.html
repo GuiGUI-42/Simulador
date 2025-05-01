@@ -76,6 +76,21 @@
             <div id="latex_controlador_polinomial" class="latex-container">Carregando forma polinomial...</div>
             <div id="latex_controlador_fatorada" class="latex-container">Carregando forma fatorada...</div>
         </div>
+        <div class="section">
+            <h3>Perturbação (Malha Fechada)</h3>
+            <div id="slider2d-fechada" class="slider2d-box">
+                <div id="slider2d-point-fechada"></div>
+                <span class="slider2d-label slider2d-label-left">
+                    Tempo:
+                    <input id="input-t-fechada" type="number" min="0" max="50" step="0.01" style="width:60px; margin-left:6px;">
+                </span>
+                <span class="slider2d-label slider2d-label-right">
+                    Amplitude:
+                    <input id="input-a-fechada" type="number" min="-2" max="2" step="0.01" style="width:60px; margin-left:6px;">
+                </span>
+                <span class="slider2d-hint">Arraste o ponto laranja</span>
+            </div>
+        </div>
     </div>
 
     <!-- Seção Direita -->
@@ -210,7 +225,9 @@
             zeros_planta: zerosPlanta,
             polos_controlador: polosControlador,
             zeros_controlador: zerosControlador,
-            ganho_controlador: ganhoControlador
+            ganho_controlador: ganhoControlador,
+            t_perturb_fechada: t_perturb_fechada,           // <-- adicione isto
+            amp_perturb_fechada: amp_perturb_fechada        // <-- adicione isto
         };
         const res = await fetch('/atualizar_pagina4', {
             method: 'POST',
@@ -310,6 +327,80 @@
         document.getElementById('ganho-controlador').value = this.value;
         atualizar();
     });
+
+    // --- Slider 2D para perturbação em malha fechada ---
+    const slider2dFechada = document.getElementById('slider2d-fechada');
+    const pointFechada = document.getElementById('slider2d-point-fechada');
+    const tLabelFechada = document.getElementById('slider2d-t-fechada');
+    const aLabelFechada = document.getElementById('slider2d-a-fechada');
+    const inputTFechada = document.getElementById('input-t-fechada');
+    const inputAFechada = document.getElementById('input-a-fechada');
+    const tMinF = 0, tMaxF = 50;
+    const aMinF = -2, aMaxF = 2;
+    let t_perturb_fechada = 20, amp_perturb_fechada = 0.5;
+
+    function getSlider2dFechadaSize() {
+        const rect = slider2dFechada.getBoundingClientRect();
+        return { width: rect.width, height: 120 };
+    }
+
+    function updateSlider2dFechada(updateInputs=true) {
+        const { width, height } = getSlider2dFechadaSize();
+        const x = ((t_perturb_fechada - tMinF) / (tMaxF - tMinF)) * (width - 18);
+        const y = ((aMaxF - amp_perturb_fechada) / (aMaxF - aMinF)) * (height - 18);
+        pointFechada.style.left = x + "px";
+        pointFechada.style.top = y + "px";
+        if(updateInputs) {
+            inputTFechada.value = t_perturb_fechada.toFixed(2);
+            inputAFechada.value = amp_perturb_fechada.toFixed(2);
+        }
+    }
+
+    // Drag & drop
+    let draggingFechada = false;
+    pointFechada.onmousedown = function(e) {
+        draggingFechada = true;
+        document.body.style.userSelect = "none";
+    };
+    document.onmouseup = function() {
+        draggingFechada = false;
+        document.body.style.userSelect = "";
+    };
+    document.onmousemove = function(e) {
+        if (!draggingFechada) return;
+        const rect = slider2dFechada.getBoundingClientRect();
+        const width = rect.width, height = rect.height;
+        let x = e.clientX - rect.left - 9;
+        let y = e.clientY - rect.top - 9;
+        x = Math.max(0, Math.min(x, width - 18));
+        y = Math.max(0, Math.min(y, height - 18));
+        t_perturb_fechada = tMinF + (x / (width - 18)) * (tMaxF - tMinF);
+        amp_perturb_fechada = aMaxF - (y / (height - 18)) * (aMaxF - aMinF);
+        updateSlider2dFechada();
+        atualizar();
+    };
+
+    // Inputs manuais
+    inputTFechada.addEventListener('input', function() {
+        let val = parseFloat(this.value);
+        if (isNaN(val)) return;
+        t_perturb_fechada = Math.max(tMinF, Math.min(val, tMaxF));
+        updateSlider2dFechada(false);
+        atualizar();
+    });
+    inputAFechada.addEventListener('input', function() {
+        let val = parseFloat(this.value);
+        if (isNaN(val)) return;
+        amp_perturb_fechada = Math.max(aMinF, Math.min(val, aMaxF));
+        updateSlider2dFechada(false);
+        atualizar();
+    });
+
+    // Responsivo
+    window.addEventListener('resize', () => updateSlider2dFechada());
+
+    // Inicializa
+    updateSlider2dFechada();
     </script>
 </body>
 </html>
