@@ -66,15 +66,56 @@
             </div>
         </div>
         <h3>Funções de Transferência</h3>
-        <div>
+        <div style="position: relative; margin-bottom: 16px;">
             <b>Planta:</b>
-            <div id="latex_planta_polinomial" class="latex-container">Carregando forma polinomial...</div>
-            <div id="latex_planta_fatorada" class="latex-container">Carregando forma fatorada...</div>
+            <div id="latex_planta_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
+                Carregando forma fatorada...
+            </div>
+            <!-- Seta para expandir -->
+            <button id="seta-ft-planta" title="Mostrar/ocultar forma polinomial"
+                style="
+                    position: absolute;
+                    right: 8px;
+                    bottom: 8px;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 1.5em;
+                    color: #2196f3;
+                    z-index: 10;
+                    transition: color 0.2s;
+                ">
+                &#x25BC;
+            </button>
+            <div id="latex_planta_polinomial" class="latex-container" style="display: none;">
+                Carregando forma polinomial...
+            </div>
         </div>
-        <div>
+        <!-- Substitua o bloco das FTs do controlador por este: -->
+        <div style="position: relative; margin-bottom: 16px;">
             <b>Controlador:</b>
-            <div id="latex_controlador_polinomial" class="latex-container">Carregando forma polinomial...</div>
-            <div id="latex_controlador_fatorada" class="latex-container">Carregando forma fatorada...</div>
+            <div id="latex_controlador_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
+                Carregando forma fatorada...
+            </div>
+            <!-- Seta para expandir -->
+            <button id="seta-ft-controlador" title="Mostrar/ocultar forma polinomial"
+                style="
+                    position: absolute;
+                    right: 8px;
+                    bottom: 8px;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 1.5em;
+                    color: #2196f3;
+                    z-index: 10;
+                    transition: color 0.2s;
+                ">
+                &#x25BC;
+            </button>
+            <div id="latex_controlador_polinomial" class="latex-container" style="display: none;">
+                Carregando forma polinomial...
+            </div>
         </div>
         <div class="section">
             <h3>Perturbação (Malha Fechada)</h3>
@@ -337,7 +378,7 @@
     const inputAFechada = document.getElementById('input-a-fechada');
     const tMinF = 0, tMaxF = 50;
     const aMinF = -2, aMaxF = 2;
-    let t_perturb_fechada = 20, amp_perturb_fechada = 0.5;
+    let t_perturb_fechada = 20, amp_perturb_fechada = 0.0;
 
     function getSlider2dFechadaSize() {
         const rect = slider2dFechada.getBoundingClientRect();
@@ -401,6 +442,29 @@
 
     // Inicializa
     updateSlider2dFechada();
+
+    // Adicione ao final do seu <script> ou após o updateSlider2dFechada()
+    const setaFtPlanta = document.getElementById('seta-ft-planta');
+    const polinomialDiv = document.getElementById('latex_planta_polinomial');
+    let polinomialVisivel = false;
+
+    setaFtPlanta.onclick = function() {
+        polinomialVisivel = !polinomialVisivel;
+        polinomialDiv.style.display = polinomialVisivel ? '' : 'none';
+        setaFtPlanta.innerHTML = polinomialVisivel ? '&#x25B2;' : '&#x25BC;';
+    };
+
+    // Seta para expandir/recolher FT do controlador (agora fatorada é a principal)
+    const setaFtControlador = document.getElementById('seta-ft-controlador');
+    const fatoradaDivControlador = document.getElementById('latex_controlador_fatorada');
+    const polinomialDivControlador = document.getElementById('latex_controlador_polinomial');
+    let fatoradaVisivelControlador = false;
+
+    setaFtControlador.onclick = function() {
+        fatoradaVisivelControlador = !fatoradaVisivelControlador;
+        polinomialDivControlador.style.display = fatoradaVisivelControlador ? '' : 'none';
+        setaFtControlador.innerHTML = fatoradaVisivelControlador ? '&#x25B2;' : '&#x25BC;';
+    };
     </script>
 </body>
 </html>

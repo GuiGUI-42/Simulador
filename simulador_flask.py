@@ -240,15 +240,19 @@ def atualizar_pagina4():
     }
 
     # Resposta ao degrau (Malha Fechada - planta e controlador)
-    T_closed, yout_closed = ctl.step_response(G_closed)
     T = np.linspace(0, 50, 1000)
     u = np.ones_like(T)
-    u[T >= t_perturb_fechada] += amp_perturb_fechada
-    _, yout_perturb = ctl.forced_response(G_closed, T, u)
+    # Resposta sem perturbação
+    _, yout_closed = ctl.forced_response(G_closed, T, np.ones_like(T))
+    # Resposta com perturbação
+    u_perturb = np.ones_like(T)
+    u_perturb[T >= t_perturb_fechada] += amp_perturb_fechada
+    _, yout_perturb = ctl.forced_response(G_closed, T, u_perturb)
 
     plot_closed_data = {
         "data": [
-            {"x": T.tolist(), "y": yout_perturb.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Fechada)"}
+            {"x": T.tolist(), "y": yout_closed.tolist(), "mode": "lines", "name": "Sem Perturbação"},
+            {"x": T.tolist(), "y": yout_perturb.tolist(), "mode": "lines", "name": "Com Perturbação"}
         ],
         "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
     }
@@ -261,41 +265,24 @@ def atualizar_pagina4():
     # Use yout_perturb para o gráfico plot_closed_data
 
     # Gere as strings LaTeX para as FTs
-    ordem_den_planta = len(den_planta) - 1
-    # Ordem do numerador: conta quantos zeros são diferentes de zero
-    ordem_num_planta = np.sum(np.abs(zeros_planta) > 1e-8)
-    if ordem_num_planta == 0:
-        ordem_num_planta = 0 if np.allclose(num_planta, [1]) else len(num_planta) - 1
-
-    ordem_controlador = len(den_controlador) - 1
-    ordem_num_controlador = np.sum(np.abs(zeros_controlador) > 1e-8)
-    if ordem_num_controlador == 0:
-        ordem_num_controlador = 0 if np.allclose(num_controlador, [1]) else len(num_controlador) - 1
-
     latex_planta_polinomial = (
-        f"\\[ \\text{{Ordem: }} {ordem_den_planta} \\qquad "
-        f"G(s) = \\frac{{{latex_poly(num_planta, 's')}}}{{{latex_poly(den_planta, 's')}}} \\]"
+        f"\\[ G(s) = \\frac{{{latex_poly(num_planta, 's')}}}{{{latex_poly(den_planta, 's')}}} \\]"
     )
     latex_planta_fatorada = (
-        f"\\[ \\text{{Ordem: }} {ordem_den_planta} \\qquad "
-        f"G(s) = \\frac{{{latex_factored(zeros_planta, 's')}}}{{{latex_factored(polos_planta, 's')}}} \\]"
+        f"\\[ G(s) = \\frac{{{latex_factored(zeros_planta, 's')}}}{{{latex_factored(polos_planta, 's')}}} \\]"
     )
     latex_controlador_polinomial = (
-        f"\\[ \\text{{Ordem: }} {ordem_controlador} \\qquad "
-        f"G_c(s) = \\frac{{{latex_poly(num_controlador, 's')}}}{{{latex_poly(den_controlador, 's')}}} \\]"
+        f"\\[ G_c(s) = \\frac{{{latex_poly(num_controlador, 's')}}}{{{latex_poly(den_controlador, 's')}}} \\]"
     )
     latex_controlador_fatorada = (
-        f"\\[ \\text{{Ordem: }} {ordem_controlador} \\qquad "
-        f"G_c(s) = \\frac{{{latex_factored(zeros_controlador, 's')}}}{{{latex_factored(polos_controlador, 's')}}} \\]"
+        f"\\[ G_c(s) = \\frac{{{latex_factored(zeros_controlador, 's')}}}{{{latex_factored(polos_controlador, 's')}}} \\]"
     )
 
     latex_planta_monic = (
-        f"\\[ \\text{{Ordem: }} {ordem_den_planta} "
-        f"G(s) = \\frac{{{latex_monic(num_planta, 's')}}}{{{latex_monic(den_planta, 's')}}} \\]"
+        f"\\[ G(s) = \\frac{{{latex_monic(num_planta, 's')}}}{{{latex_monic(den_planta, 's')}}} \\]"
     )
     latex_controlador_monic = (
-        f"\\[ \\text{{Ordem: }} {ordem_controlador} "
-        f"G_c(s) = \\frac{{{latex_monic(num_controlador, 's')}}}{{{latex_monic(den_controlador, 's')}}} \\]"
+        f"\\[ G_c(s) = \\frac{{{latex_monic(num_controlador, 's')}}}{{{latex_monic(den_controlador, 's')}}} \\]"
     )
 
     return jsonify({
