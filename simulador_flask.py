@@ -5,6 +5,11 @@ import matplotlib
 matplotlib.use('Agg')  # Força uso de backend sem Tkinter
 import matplotlib.pyplot as plt
 
+plt.rcParams['axes.formatter.useoffset'] = False
+plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['text.usetex'] = False  # Garante que não tenta usar LaTeX
+plt.rcParams['axes.formatter.use_mathtext'] = False
+
 import io
 import base64
 import control as ctl
@@ -108,69 +113,97 @@ def atualizar():
 @app.route('/atualizar_bode', methods=['POST'])
 def atualizar_bode():
     data = request.get_json()
+    polos_planta = data.get("polos_planta", [-1])
+    zeros_planta = data.get("zeros_planta", [0])
+    polos_controlador = data.get("polos_controlador", [-1])
+    zeros_controlador = data.get("zeros_controlador", [0])
+    ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
-    # Recebe os parâmetros da planta
-    p1_1 = float(data.get("p1_1", -1))
-    z_1 = float(data.get("z_1", 0))
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    polos_planta_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
+    zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
+    polos_controlador_filtrados = [p for p in polos_controlador if abs(p) > 1e-8]
 
-    # Define a função de transferência da planta
-    num = np.poly([z_1])
-    den = np.poly([p1_1])
-    G = ctl.tf(num, den)
+    num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
+    den_planta = np.poly(polos_planta_filtrados)
+    num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
+    num_controlador = ganho_controlador * num_controlador
+    den_controlador = np.poly(polos_controlador_filtrados)
 
-    # Calcula os dados para o diagrama de Bode
-    omega = np.logspace(-2, 2, 500)  # Frequência em rad/s
-    mag, phase, omega = ctl.bode(G, omega=omega, dB=True, plot=False)
+    num_open = np.polymul(num_planta, num_controlador)
+    den_open = np.polymul(den_planta, den_controlador)
+    G_open = ctl.tf(num_open, den_open)
 
-    # Gera o gráfico de Bode manualmente
-    fig_bode, (mag_ax, phase_ax) = plt.subplots(2, 1, figsize=(10, 6))
+    omega = np.logspace(-2, 2, 500)
+    mag, phase, omega = ctl.bode(G_open, omega=omega, dB=True, plot=False)
 
-    # Plota magnitude
-    mag_ax.semilogx(omega, 20 * np.log10(mag))
-    mag_ax.set_title("Diagrama de Bode - Magnitude")
-    mag_ax.set_ylabel("Magnitude (dB)")
-    mag_ax.set_xlabel("Frequência (rad/s)")
-    mag_ax.grid(which="both", linestyle="--", linewidth=0.5)
+    bode_data = {
+        "data": [
+            {
+                "x": omega.tolist(),
+                "y": 20 * np.log10(mag).tolist(),
+                "type": "scatter",
+                "mode": "lines",
+                "name": "Magnitude"
+            },
+            {
+                "x": omega.tolist(),
+                "y": np.degrees(phase).tolist(),
+                "type": "scatter",
+                "mode": "lines",
+                "name": "Fase",
+                "yaxis": "y2"
+            }
+        ],
+        "layout": {
+            "title": "Diagrama de Bode",
+            "xaxis": {"title": "Frequência (rad/s)", "type": "log"},
+            "yaxis": {"title": "Magnitude (dB)"},
+            "yaxis2": {
+                "title": "Fase (graus)",
+                "overlaying": "y",
+                "side": "right"
+            },
+            "legend": {"x": 0, "y": 1.1, "orientation": "h"}
+        }
+    }
 
-    # Plota fase
-    phase_ax.semilogx(omega, np.degrees(phase))
-    phase_ax.set_title("Diagrama de Bode - Fase")
-    phase_ax.set_ylabel("Fase (graus)")
-    phase_ax.set_xlabel("Frequência (rad/s)")
-    phase_ax.grid(which="both", linestyle="--", linewidth=0.5)
-
-    # Salva o gráfico em um buffer
-    plt.tight_layout()
-    buf_bode = io.BytesIO()
-    plt.savefig(buf_bode, format='png')
-    plt.close(fig_bode)
-    buf_bode.seek(0)
-    bode_base64 = base64.b64encode(buf_bode.read()).decode('utf-8')
-
-    return jsonify({
-        "bode_url": f"data:image/png;base64,{bode_base64}"
-    })
+    return jsonify({"bode_data": bode_data})
 
 @app.route('/atualizar_nyquist', methods=['POST'])
 def atualizar_nyquist():
     data = request.get_json()
+    polos_planta = data.get("polos_planta", [-1])
+    zeros_planta = data.get("zeros_planta", [0])
+    polos_controlador = data.get("polos_controlador", [-1])
+    zeros_controlador = data.get("zeros_controlador", [0])
+    ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
-    # Recebe os parâmetros da planta
-    p1_1 = float(data.get("p1_1", -1))
-    z_1 = float(data.get("z_1", 0))
+    # Filtra zeros e polos não nulos
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    polos_planta_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
+    zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
+    polos_controlador_filtrados = [p for p in polos_controlador if abs(p) > 1e-8]
 
-    # Define a função de transferência da planta
-    num = np.poly([z_1])
-    den = np.poly([p1_1])
-    G = ctl.tf(num, den)
+    # Função de transferência da planta
+    num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
+    den_planta = np.poly(polos_planta_filtrados)
 
-    # Gera o gráfico de Nyquist
+    # Função de transferência do controlador
+    num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
+    num_controlador = ganho_controlador * num_controlador  # Aplica o ganho
+    den_controlador = np.poly(polos_controlador_filtrados)
+
+    # Função de transferência em malha aberta (planta × controlador)
+    num_open = np.polymul(num_planta, num_controlador)
+    den_open = np.polymul(den_planta, den_controlador)
+    G_open = ctl.tf(num_open, den_open)
+
+    # Gera o diagrama de Nyquist
     fig_nyquist = plt.figure(figsize=(6, 6))
-    ctl.nyquist(G, omega=np.logspace(-2, 2, 500))
+    ctl.nyquist(G_open, omega=np.logspace(-2, 2, 500))
     plt.title("Diagrama de Nyquist")
     plt.grid(which="both", linestyle="--", linewidth=0.5)
-
-    # Salva o gráfico em um buffer
     buf_nyquist = io.BytesIO()
     plt.savefig(buf_nyquist, format='png')
     plt.close(fig_nyquist)
@@ -193,6 +226,29 @@ def atualizar_pagina4():
     t_perturb_fechada = float(data.get("t_perturb_fechada", 20))
     amp_perturb_fechada = float(data.get("amp_perturb_fechada", 0.5))
 
+    # Polos e zeros da planta e do controlador (malha aberta)
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
+    polos_planta_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
+    polos_controlador_filtrados = [p for p in polos_controlador if abs(p) > 1e-8]
+
+    # Junta todos os polos e zeros da planta e do controlador
+    zeros_aberta = zeros_planta_filtrados + zeros_controlador_filtrados
+    polos_aberta = polos_planta_filtrados + polos_controlador_filtrados
+
+    plot_pz_data = {
+        "data": [
+            {"x": np.real(zeros_aberta).tolist(), "y": np.imag(zeros_aberta).tolist(), "mode": "markers", "name": "Zeros"},
+            {"x": np.real(polos_aberta).tolist(), "y": np.imag(polos_aberta).tolist(), "mode": "markers", "name": "Polos"}
+        ],
+        "layout": {
+            "title": "Diagrama de Polos e Zeros (Malha Aberta)",
+            "xaxis": {"title": "Re"},
+            "yaxis": {"title": "Im"},
+            "showlegend": True  # <-- Adicione esta linha
+        }
+    }
+
     # Filtra zeros realmente diferentes de zero
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
     num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
@@ -209,6 +265,8 @@ def atualizar_pagina4():
     G_open = G_planta
     G_closed = ctl.feedback(G_planta * G_controlador)
 
+    
+
     # Arredonda os coeficientes para três casas decimais
     num_planta_rounded = np.round(num_planta, 3)
     den_planta_rounded = np.round(den_planta, 3)
@@ -217,18 +275,7 @@ def atualizar_pagina4():
 
     # Formata as funções de transferência com os coeficientes arredondados
     latex_planta_monomial = f"\\[ G(s) = \\frac{{{np.poly1d(num_planta_rounded, variable='s')}}}{{{np.poly1d(den_planta_rounded, variable='s')}}} \\]"
-    latex_controlador = f"\\[ G_c(s) = \\frac{{{np.poly1d(num_controlador_rounded, variable='s')}}}{{{np.poly1d(den_controlador_rounded, variable='s')}}} \\ ]"
-
-    # Dados para os gráficos
-    zeros = np.roots(num_planta)
-    poles = np.roots(den_planta)
-    plot_pz_data = {
-        "data": [
-            {"x": np.real(zeros).tolist(), "y": np.imag(zeros).tolist(), "mode": "markers", "name": "Zeros"},
-            {"x": np.real(poles).tolist(), "y": np.imag(poles).tolist(), "mode": "markers", "name": "Polos"}
-        ],
-        "layout": {"title": "Diagrama de Polos e Zeros", "xaxis": {"title": "Re"}, "yaxis": {"title": "Im"}}
-    }
+    latex_controlador = f"\\[ G_c(s) = \\frac{{{np.poly1d(num_controlador_rounded, variable='s')}}}{{{np.poly1d(den_controlador_rounded, variable='s')}}} \\]"
 
     # Resposta ao degrau (Malha Aberta - apenas planta)
     T_open, yout_open = ctl.step_response(G_open)
@@ -241,7 +288,6 @@ def atualizar_pagina4():
 
     # Resposta ao degrau (Malha Fechada - planta e controlador)
     T = np.linspace(0, 50, 1000)
-    u = np.ones_like(T)
     # Resposta sem perturbação
     _, yout_closed = ctl.forced_response(G_closed, T, np.ones_like(T))
     # Resposta com perturbação
@@ -256,13 +302,6 @@ def atualizar_pagina4():
         ],
         "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
     }
-
-    # Supondo que Gmf seja a função de transferência em malha fechada
-    T = np.linspace(0, 50, 1000)
-    u = np.ones_like(T)
-    u[T >= t_perturb_fechada] += amp_perturb_fechada
-    _, yout_perturb = ctl.forced_response(G_closed, T, u)
-    # Use yout_perturb para o gráfico plot_closed_data
 
     # Gere as strings LaTeX para as FTs
     latex_planta_polinomial = (

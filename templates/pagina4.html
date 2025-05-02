@@ -39,10 +39,24 @@
                     <option value="3">3ª Ordem</option>
                 </select>
             </div>
-            <div style="margin: 10px 0;">
-                <label style="display: flex; align-items: center;">
+            <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
+                <label style="display: flex; align-items: center; flex: 1;">
                     <input type="checkbox" id="mostrar-malha-aberta" checked style="margin-right: 6px;">
                     Mostrar Resposta ao Degrau (Malha Aberta)
+                </label>
+                <label style="display: flex; align-items: center; flex: 1;">
+                    <input type="checkbox" id="mostrar-pz" checked style="margin-right: 6px;">
+                    Mostrar Diagrama de Polos e Zeros
+                </label>
+            </div>
+            <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
+                <label style="display: flex; align-items: center; flex: 1;">
+                    <input type="checkbox" id="mostrar-bode" checked style="margin-right: 6px;">
+                    Mostrar Diagrama de Bode
+                </label>
+                <label style="display: flex; align-items: center; flex: 1;">
+                    <input type="checkbox" id="mostrar-nyquist" checked style="margin-right: 6px;">
+                    Mostrar Diagrama de Nyquist
                 </label>
             </div>
             <div style="display: flex; justify-content: space-between;">
@@ -145,6 +159,10 @@
         </div>
         <h4>Resposta ao Degrau (Malha Fechada)</h4>
         <div id="plot_closed"></div>
+        <h4>Diagrama de Bode</h4>
+        <div id="plot_bode"></div>
+        <h4>Diagrama de Nyquist</h4>
+        <div id="plot_nyquist"></div>
     </div>
 
     <div id="modal-feedback" class="modal">
@@ -207,42 +225,42 @@
             let inputP = document.getElementById(`polo-planta-input-${i}`);
             sliderP.addEventListener('input', () => {
                 inputP.value = sliderP.value;
-                atualizar();
+                atualizarTudo(); // <-- Troque para atualizarTudo
             });
             inputP.addEventListener('input', () => {
                 sliderP.value = inputP.value;
-                atualizar();
+                atualizarTudo();
             });
             let sliderZ = document.getElementById(`zero-planta-${i}`);
             let inputZ = document.getElementById(`zero-planta-input-${i}`);
             sliderZ.addEventListener('input', () => {
                 inputZ.value = sliderZ.value;
-                atualizar();
+                atualizarTudo();
             });
             inputZ.addEventListener('input', () => {
                 sliderZ.value = inputZ.value;
-                atualizar();
+                atualizarTudo();
             });
             // Controlador
             let sliderPC = document.getElementById(`polo-controlador-${i}`);
             let inputPC = document.getElementById(`polo-controlador-input-${i}`);
             sliderPC.addEventListener('input', () => {
                 inputPC.value = sliderPC.value;
-                atualizar();
+                atualizarTudo();
             });
             inputPC.addEventListener('input', () => {
                 sliderPC.value = inputPC.value;
-                atualizar();
+                atualizarTudo();
             });
             let sliderZC = document.getElementById(`zero-controlador-${i}`);
             let inputZC = document.getElementById(`zero-controlador-input-${i}`);
             sliderZC.addEventListener('input', () => {
                 inputZC.value = sliderZC.value;
-                atualizar();
+                atualizarTudo();
             });
             inputZC.addEventListener('input', () => {
                 sliderZC.value = inputZC.value;
-                atualizar();
+                atualizarTudo();
             });
         }
     }
@@ -293,14 +311,67 @@
         document.getElementById('malha-aberta-container').style.display = mostrar ? '' : 'none';
     }
 
-    document.getElementById("ordem-sistema").addEventListener("change", () => {
-        atualizarSliders();
-        atualizar();
-    });
+    async function atualizarBodeNyquist() {
+        const ordem = parseInt(document.getElementById("ordem-sistema").value);
+        const polosPlanta = [];
+        const zerosPlanta = [];
+        const polosControlador = [];
+        const zerosControlador = [];
+        const ganhoControlador = parseFloat(document.getElementById('ganho-controlador').value);
+
+        for (let i = 1; i <= ordem; i++) {
+            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-${i}`).value));
+            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-${i}`).value));
+            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-${i}`).value));
+            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-${i}`).value));
+        }
+
+        const data = {
+            ordem: ordem,
+            polos_planta: polosPlanta,
+            zeros_planta: zerosPlanta,
+            polos_controlador: polosControlador,
+            zeros_controlador: zerosControlador,
+            ganho_controlador: ganhoControlador
+        };
+
+        // Bode
+        const resBode = await fetch('/atualizar_bode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const bode = await resBode.json();
+        Plotly.newPlot('plot_bode', bode.bode_data.data, bode.bode_data.layout);
+
+        // Nyquist
+        const resNyquist = await fetch('/atualizar_nyquist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const nyquist = await resNyquist.json();
+        Plotly.newPlot('plot_nyquist', nyquist.nyquist_data.data, nyquist.nyquist_data.layout);
+    }
+
+    // Chame após atualizar()
+    async function atualizarTudo() {
+        await atualizar(); // Atualiza os gráficos de polos e zeros e resposta ao degrau
+        await atualizarBodeNyquist(); // Atualiza os diagramas de Bode e Nyquist
+    }
+
+    // Troque window.onload e eventos para usar atualizarTudo:
     window.onload = () => {
         atualizarSliders();
-        atualizar();
+        atualizarTudo();
+        document.getElementById('plot_pz').style.display = document.getElementById('mostrar-pz').checked ? '' : 'none';
+        document.getElementById('plot_bode').style.display = document.getElementById('mostrar-bode').checked ? '' : 'none';
+        document.getElementById('plot_nyquist').style.display = document.getElementById('mostrar-nyquist').checked ? '' : 'none';
     };
+    document.getElementById("ordem-sistema").addEventListener("change", () => {
+        atualizarSliders();
+        atualizarTudo();
+    });
 
     // Mostra ou esconde o gráfico de malha aberta conforme a caixa de seleção
     document.getElementById('mostrar-malha-aberta').addEventListener('change', function() {
@@ -310,6 +381,16 @@
     document.getElementById('mostrar-malha-aberta').addEventListener('change', function() {
         const container = document.getElementById('malha-aberta-container');
         container.style.display = this.checked ? '' : 'none';
+    });
+
+    document.getElementById('mostrar-pz').addEventListener('change', function() {
+        document.getElementById('plot_pz').style.display = this.checked ? '' : 'none';
+    });
+    document.getElementById('mostrar-bode').addEventListener('change', function() {
+        document.getElementById('plot_bode').style.display = this.checked ? '' : 'none';
+    });
+    document.getElementById('mostrar-nyquist').addEventListener('change', function() {
+        document.getElementById('plot_nyquist').style.display = this.checked ? '' : 'none';
     });
 
     // Menu e modo escuro (mantém igual)
@@ -362,11 +443,11 @@
     // Após atualizarSliders() e adicionarEventosSliders()
     document.getElementById('ganho-controlador').addEventListener('input', function() {
         document.getElementById('ganho-controlador-input').value = this.value;
-        atualizar();
+        atualizarTudo();
     });
     document.getElementById('ganho-controlador-input').addEventListener('input', function() {
         document.getElementById('ganho-controlador').value = this.value;
-        atualizar();
+        atualizarTudo();
     });
 
     // --- Slider 2D para perturbação em malha fechada ---
