@@ -8,9 +8,8 @@
     </script>
     <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
     <link rel="stylesheet" href="/static/css/slider-style.css">
-    
 </head>
-<body>
+<body style="margin:0; min-height:100vh; background:#f3f3f7; display:flex; flex-direction:column; align-items:center;">
     <!-- Menu de hambúrguer -->
     <div class="menu">
         <div class="menu-icon"></div>
@@ -26,143 +25,183 @@
         </div>
     </div>
 
-    <!-- Seção Esquerda -->
-    <div class="left-section">
-        <div id="parametros-fixos">
-            <h3>Ajuste de Parâmetros</h3>
-            <!-- Seleção da Ordem do Sistema -->
-            <div style="margin-bottom: 20px;">
-                <label for="ordem-sistema">Ordem do Sistema:</label>
-                <select id="ordem-sistema">
-                    <option value="1">1ª Ordem</option>
-                    <option value="2">2ª Ordem</option>
-                    <option value="3">3ª Ordem</option>
-                </select>
-            </div>
-            <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
-                <label style="display: flex; align-items: center; flex: 1;">
-                    <input type="checkbox" id="mostrar-malha-aberta" checked style="margin-right: 6px;">
-                    Mostrar Resposta ao Degrau (Malha Aberta)
-                </label>
-                <label style="display: flex; align-items: center; flex: 1;">
-                    <input type="checkbox" id="mostrar-pz" checked style="margin-right: 6px;">
-                    Mostrar Diagrama de Polos e Zeros
-                </label>
-            </div>
-            <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
-                <label style="display: flex; align-items: center; flex: 1;">
-                    <input type="checkbox" id="mostrar-bode" checked style="margin-right: 6px;">
-                    Mostrar Diagrama de Bode
-                </label>
-                <label style="display: flex; align-items: center; flex: 1;">
-                    <input type="checkbox" id="mostrar-nyquist" checked style="margin-right: 6px;">
-                    Mostrar Diagrama de Nyquist
-                </label>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <!-- Parâmetros da Planta -->
-                <div style="width: 48%;">
-                    <h4>Parâmetros da Planta</h4>
-                    <div id="planta-sliders"></div>
-                </div>
-                <!-- Parâmetros do Controlador -->
-                <div style="width: 48%;">
-                    <h4>Parâmetros do Controlador</h4>
-                    <div class="slider-container">
-                        <label class="slider-label">
-                            <span>Ganho do Controlador (K):</span>
-                        </label>
-                        <input id="ganho-controlador" type="range" min="-10" max="20" step="0.01" value="1">
-                        <input id="ganho-controlador-input" type="number" min="0" max="10" step="0.01" value="1" style="width: 80px; margin-left: 10px;">
-                    </div>
-                    <div id="controlador-sliders"></div>
-                </div>
-            </div>
-        </div>
-        <h3>Funções de Transferência</h3>
-        <div style="position: relative; margin-bottom: 16px;">
-            <b>Planta:</b>
-            <div id="latex_planta_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
-                Carregando forma fatorada...
-            </div>
-            <!-- Seta para expandir -->
-            <button id="seta-ft-planta" title="Mostrar/ocultar forma polinomial"
-                style="
-                    position: absolute;
-                    right: 8px;
-                    bottom: 8px;
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    font-size: 1.5em;
-                    color: #2196f3;
-                    z-index: 10;
-                    transition: color 0.2s;
-                ">
-                &#x25BC;
-            </button>
-            <div id="latex_planta_polinomial" class="latex-container" style="display: none;">
-                Carregando forma polinomial...
-            </div>
-        </div>
-        <!-- Substitua o bloco das FTs do controlador por este: -->
-        <div style="position: relative; margin-bottom: 16px;">
-            <b>Controlador:</b>
-            <div id="latex_controlador_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
-                Carregando forma fatorada...
-            </div>
-            <!-- Seta para expandir -->
-            <button id="seta-ft-controlador" title="Mostrar/ocultar forma polinomial"
-                style="
-                    position: absolute;
-                    right: 8px;
-                    bottom: 8px;
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    font-size: 1.5em;
-                    color: #2196f3;
-                    z-index: 10;
-                    transition: color 0.2s;
-                ">
-                &#x25BC;
-            </button>
-            <div id="latex_controlador_polinomial" class="latex-container" style="display: none;">
-                Carregando forma polinomial...
-            </div>
-        </div>
-        <div class="section">
-            <h3>Perturbação (Malha Fechada)</h3>
-            <div id="slider2d-fechada" class="slider2d-box">
-                <div id="slider2d-point-fechada"></div>
-                <span class="slider2d-label slider2d-label-left">
-                    Tempo:
-                    <input id="input-t-fechada" type="number" min="0" max="50" step="0.01" style="width:60px; margin-left:6px;">
-                </span>
-                <span class="slider2d-label slider2d-label-right">
-                    Amplitude:
-                    <input id="input-a-fechada" type="number" min="-2" max="2" step="0.01" style="width:60px; margin-left:6px;">
-                </span>
-                <span class="slider2d-hint">Arraste o ponto laranja</span>
-            </div>
-        </div>
+    <!-- Título centralizado -->
+    <div style="text-align: center; margin-top: 16px; margin-bottom: 8px;">
+        <h1 style="margin: 0;">SisCo</h1>
     </div>
 
-    <!-- Seção Direita -->
-    <div class="right-section">
-        <h3>Gráficos</h3>
-        <h4>Diagrama de Polos e Zeros</h4>
-        <div id="plot_pz"></div>
-        <div id="malha-aberta-container">
-            <h4>Resposta ao Degrau (Malha Aberta)</h4>
-            <div id="plot_open"></div>
+    <!-- Container principal ocupando toda a tela -->
+    <div class="main-container" style="
+        display: flex;
+        flex-direction: row;
+        gap: 24px;
+        height: calc(100vh - 72px); /* Ajuste se o título for maior/menor */
+        width: 100vw;
+        align-items: stretch;
+        box-sizing: border-box;
+        justify-content: center;
+    ">
+        <!-- Seção Esquerda -->
+        <div class="left-section" style="
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            box-sizing: border-box;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px #0001;
+            min-width: 350px;
+            /* max-width removido */
+            height: 100%;
+            margin-bottom: 0;
+        ">
+            <div id="parametros-fixos">
+                <h3>Ajuste de Parâmetros</h3>
+                <!-- Seleção da Ordem do Sistema -->
+                <div style="margin-bottom: 20px;">
+                    <label for="ordem-sistema">Ordem do Sistema:</label>
+                    <select id="ordem-sistema">
+                        <option value="1">1ª Ordem</option>
+                        <option value="2">2ª Ordem</option>
+                        <option value="3">3ª Ordem</option>
+                    </select>
+                </div>
+                <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
+                    <label style="display: flex; align-items: center; flex: 1;">
+                        <input type="checkbox" id="mostrar-malha-aberta" checked style="margin-right: 6px;">
+                        Mostrar Resposta ao Degrau (Malha Aberta)
+                    </label>
+                    <label style="display: flex; align-items: center; flex: 1;">
+                        <input type="checkbox" id="mostrar-pz" checked style="margin-right: 6px;">
+                        Mostrar Diagrama de Polos e Zeros
+                    </label>
+                </div>
+                <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
+                    <label style="display: flex; align-items: center; flex: 1;">
+                        <input type="checkbox" id="mostrar-bode" checked style="margin-right: 6px;">
+                        Mostrar Diagrama de Bode
+                    </label>
+                    <label style="display: flex; align-items: center; flex: 1;">
+                        <input type="checkbox" id="mostrar-nyquist" checked style="margin-right: 6px;">
+                        Mostrar Diagrama de Nyquist
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <!-- Parâmetros da Planta -->
+                    <div style="width: 48%;">
+                        <h4>Parâmetros da Planta</h4>
+                        <div id="planta-sliders"></div>
+                    </div>
+                    <!-- Parâmetros do Controlador -->
+                    <div style="width: 48%;">
+                        <h4>Parâmetros do Controlador</h4>
+                        <div class="slider-container">
+                            <label class="slider-label">
+                                <span>Ganho do Controlador (K):</span>
+                            </label>
+                            <input id="ganho-controlador" type="range" min="-10" max="20" step="0.01" value="1">
+                            <input id="ganho-controlador-input" type="number" min="0" max="10" step="0.01" value="1" style="width: 80px; margin-left: 10px;">
+                        </div>
+                        <div id="controlador-sliders"></div>
+                    </div>
+                </div>
+            </div>
+            <h3>Funções de Transferência</h3>
+            <div style="position: relative; margin-bottom: 16px;">
+                <b>Planta:</b>
+                <div id="latex_planta_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
+                    Carregando forma fatorada...
+                </div>
+                <!-- Seta para expandir -->
+                <button id="seta-ft-planta" title="Mostrar/ocultar forma polinomial"
+                    style="
+                        position: absolute;
+                        right: 8px;
+                        bottom: 8px;
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        font-size: 1.5em;
+                        color: #2196f3;
+                        z-index: 10;
+                        transition: color 0.2s;
+                    ">
+                    &#x25BC;
+                </button>
+                <div id="latex_planta_polinomial" class="latex-container" style="display: none;">
+                    Carregando forma polinomial...
+                </div>
+            </div>
+            <div style="position: relative; margin-bottom: 16px;">
+                <b>Controlador:</b>
+                <div id="latex_controlador_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
+                    Carregando forma fatorada...
+                </div>
+                <!-- Seta para expandir -->
+                <button id="seta-ft-controlador" title="Mostrar/ocultar forma polinomial"
+                    style="
+                        position: absolute;
+                        right: 8px;
+                        bottom: 8px;
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        font-size: 1.5em;
+                        color: #2196f3;
+                        z-index: 10;
+                        transition: color 0.2s;
+                    ">
+                    &#x25BC;
+                </button>
+                <div id="latex_controlador_polinomial" class="latex-container" style="display: none;">
+                    Carregando forma polinomial...
+                </div>
+            </div>
+            <div class="section">
+                <h3>Perturbação (Malha Fechada)</h3>
+                <div id="slider2d-fechada" class="slider2d-box">
+                    <div id="slider2d-point-fechada"></div>
+                    <span class="slider2d-label slider2d-label-left">
+                        Tempo:
+                        <input id="input-t-fechada" type="number" min="0" max="50" step="0.01" style="width:60px; margin-left:6px;">
+                    </span>
+                    <span class="slider2d-label slider2d-label-right">
+                        Amplitude:
+                        <input id="input-a-fechada" type="number" min="-2" max="2" step="0.01" style="width:60px; margin-left:6px;">
+                    </span>
+                    <span class="slider2d-hint">Arraste o ponto laranja</span>
+                </div>
+            </div>
         </div>
-        <h4>Resposta ao Degrau (Malha Fechada)</h4>
-        <div id="plot_closed"></div>
-        <h4>Diagrama de Bode</h4>
-        <div id="plot_bode"></div>
-        <h4>Diagrama de Nyquist</h4>
-        <div id="plot_nyquist"></div>
+
+        <!-- Seção Direita -->
+        <div class="right-section" style="
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            box-sizing: border-box;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px #0001;
+            min-width: 350px;
+            /* max-width removido */
+            height: 100%;
+            margin-bottom: 0;
+        ">
+            <h3>Gráficos</h3>
+            <h4>Diagrama de Polos e Zeros</h4>
+            <div id="plot_pz"></div>
+            <div id="malha-aberta-container">
+                <h4>Resposta ao Degrau (Malha Aberta)</h4>
+                <div id="plot_open"></div>
+            </div>
+            <h4>Resposta ao Degrau (Malha Fechada)</h4>
+            <div id="plot_closed"></div>
+            <h4>Diagrama de Bode</h4>
+            <div id="plot_bode"></div>
+            <h4>Diagrama de Nyquist</h4>
+            <div id="plot_nyquist"></div>
+        </div>
     </div>
 
     <div id="modal-feedback" class="modal">
@@ -351,6 +390,7 @@
             body: JSON.stringify(data)
         });
         const nyquist = await resNyquist.json();
+        console.log("Nyquist Data:", nyquist); // Debug: Verifique os dados recebidos
         Plotly.newPlot('plot_nyquist', nyquist.nyquist_data.data, nyquist.nyquist_data.layout);
     }
 

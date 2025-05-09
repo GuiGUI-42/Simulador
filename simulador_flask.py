@@ -119,6 +119,12 @@ def atualizar_bode():
     zeros_controlador = data.get("zeros_controlador", [0])
     ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
+    print("polos_planta:", polos_planta)
+    print("zeros_planta:", zeros_planta)
+    print("polos_controlador:", polos_controlador)
+    print("zeros_controlador:", zeros_controlador)
+    print("ganho_controlador:", ganho_controlador)
+
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
     polos_planta_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
     zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
@@ -134,7 +140,7 @@ def atualizar_bode():
     den_open = np.polymul(den_planta, den_controlador)
     G_open = ctl.tf(num_open, den_open)
 
-    omega = np.logspace(-2, 2, 500)
+    omega = np.logspace(-2, 2, 500)  # Frequências de 0.01 a 100 rad/s
     mag, phase, omega = ctl.bode(G_open, omega=omega, dB=True, plot=False)
 
     bode_data = {
@@ -173,46 +179,46 @@ def atualizar_bode():
 @app.route('/atualizar_nyquist', methods=['POST'])
 def atualizar_nyquist():
     data = request.get_json()
-    polos_planta = data.get("polos_planta", [-1])
-    zeros_planta = data.get("zeros_planta", [0])
-    polos_controlador = data.get("polos_controlador", [-1])
-    zeros_controlador = data.get("zeros_controlador", [0])
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
+    polos_controlador = [float(p) for p in data.get("polos_controlador", [-1])]
+    zeros_controlador = [float(z) for z in data.get("zeros_controlador", [0])]
     ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
-    # Filtra zeros e polos não nulos
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
     polos_planta_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
     zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
     polos_controlador_filtrados = [p for p in polos_controlador if abs(p) > 1e-8]
 
-    # Função de transferência da planta
     num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
-    den_planta = np.poly(polos_planta_filtrados)
-
-    # Função de transferência do controlador
+    den_planta = np.poly(polos_planta_filtrados) if polos_planta_filtrados else np.array([1.0])
     num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
-    num_controlador = ganho_controlador * num_controlador  # Aplica o ganho
-    den_controlador = np.poly(polos_controlador_filtrados)
+    num_controlador = ganho_controlador * num_controlador
+    den_controlador = np.poly(polos_controlador_filtrados) if polos_controlador_filtrados else np.array([1.0])
 
-    # Função de transferência em malha aberta (planta × controlador)
     num_open = np.polymul(num_planta, num_controlador)
     den_open = np.polymul(den_planta, den_controlador)
     G_open = ctl.tf(num_open, den_open)
 
-    # Gera o diagrama de Nyquist
-    fig_nyquist = plt.figure(figsize=(6, 6))
-    ctl.nyquist(G_open, omega=np.logspace(-2, 2, 500))
-    plt.title("Diagrama de Nyquist")
-    plt.grid(which="both", linestyle="--", linewidth=0.5)
-    buf_nyquist = io.BytesIO()
-    plt.savefig(buf_nyquist, format='png')
-    plt.close(fig_nyquist)
-    buf_nyquist.seek(0)
-    nyquist_base64 = base64.b64encode(buf_nyquist.read()).decode('utf-8')
+    omega = np.logspace(-2, 2, 500)
+    _, H, _ = ctl.frequency_response(G_open, omega=omega)
+    real = np.real(H).tolist()
+    imag = np.imag(H).tolist()
 
-    return jsonify({
-        "nyquist_url": f"data:image/png;base64,{nyquist_base64}"
-    })
+    nyquist_data = {
+        "data": [
+            {"x": real, "y": imag, "mode": "lines", "name": "Nyquist"},
+            {"x": real, "y": [-i for i in imag], "mode": "lines", "name": "Nyquist (espelhado)", "line": {"dash": "dash"}}
+        ],
+        "layout": {
+            "title": "Diagrama de Nyquist",
+            "xaxis": {"title": "Eixo Real"},
+            "yaxis": {"title": "Eixo Imaginário"},
+            "showlegend": True,
+            "aspectratio": {"x": 1, "y": 1}
+        }
+    }
+    return jsonify({"nyquist_data": nyquist_data})
 
 @app.route('/atualizar_pagina4', methods=['POST'])
 def atualizar_pagina4():
@@ -262,7 +268,7 @@ def atualizar_pagina4():
     G_planta = ctl.tf(num_planta, den_planta)
     G_controlador = ctl.tf(num_controlador, den_controlador)
 
-    G_open = G_planta
+    G_open = G_planta * G_controlador
     G_closed = ctl.feedback(G_planta * G_controlador)
 
     
@@ -278,7 +284,7 @@ def atualizar_pagina4():
     latex_controlador = f"\\[ G_c(s) = \\frac{{{np.poly1d(num_controlador_rounded, variable='s')}}}{{{np.poly1d(den_controlador_rounded, variable='s')}}} \\]"
 
     # Resposta ao degrau (Malha Aberta - apenas planta)
-    T_open, yout_open = ctl.step_response(G_open)
+    T_open, yout_open = ctl.step_response(G_planta)  # <-- Use só a planta aqui!
     plot_open_data = {
         "data": [
             {"x": T_open.tolist(), "y": yout_open.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Aberta)"}
@@ -321,7 +327,7 @@ def atualizar_pagina4():
         f"\\[ G(s) = \\frac{{{latex_monic(num_planta, 's')}}}{{{latex_monic(den_planta, 's')}}} \\]"
     )
     latex_controlador_monic = (
-        f"\\[ G_c(s) = \\frac{{{latex_monic(num_controlador, 's')}}}{{{latex_monic(den_controlador, 's')}}} \\]"
+        f"\\[ G_c(s) = \\frac{{{latex_monic(num_controlador, 's')}}}{{{latex_monic(den_controlador, 's')}}} \\ ]"
     )
 
     return jsonify({
