@@ -1,0 +1,6 @@
+flask
+gunicorn
+numpy
+matplotlib
+plotly
+control

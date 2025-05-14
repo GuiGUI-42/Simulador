@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 import numpy as np
 
 import matplotlib
@@ -20,16 +20,14 @@ from email.mime.text import MIMEText
 app = Flask(__name__)
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def home():
+    return redirect('/pagina4')
 
 @app.route('/pagina2')
 def pagina2():
     return render_template('pagina2.html')
 
-@app.route('/pagina3')
-def pagina3():
-    return render_template('pagina3.html')
+
 
 @app.route('/pagina4')
 def pagina4():
@@ -201,9 +199,9 @@ def atualizar_nyquist():
     G_open = ctl.tf(num_open, den_open)
 
     omega = np.logspace(-2, 2, 500)
-    _, H, _ = ctl.frequency_response(G_open, omega=omega)
-    real = np.real(H).tolist()
-    imag = np.imag(H).tolist()
+    _, H, _ = ctl.freqresp(G_open, omega)
+    real = np.real(H[0]).tolist() if H.ndim == 3 else np.real(H).tolist()
+    imag = np.imag(H[0]).tolist() if H.ndim == 3 else np.imag(H).tolist()
 
     nyquist_data = {
         "data": [
@@ -215,7 +213,8 @@ def atualizar_nyquist():
             "xaxis": {"title": "Eixo Real"},
             "yaxis": {"title": "Eixo Imaginário"},
             "showlegend": True,
-            "aspectratio": {"x": 1, "y": 1}
+            "yaxis_scaleanchor": "x",
+            "yaxis_scaleratio": 1
         }
     }
     return jsonify({"nyquist_data": nyquist_data})
@@ -456,6 +455,33 @@ def latex_factored(roots, var='s'):
         else:
             termos.append(f"({var} - {abs(r):.3g})")
     return "".join(termos)
+
+@app.route('/nyquist_pagina2', methods=['POST'])
+def nyquist_pagina2():
+    data = request.get_json()
+    polos_planta = data.get("polos_planta", [-1])
+    zeros_planta = data.get("zeros_planta", [0])
+
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
+    den_planta = np.poly(polos_planta)
+
+    G_planta = ctl.tf(num_planta, den_planta)
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ctl.nyquist_plot(G_planta, omega=np.logspace(-2, 2, 500), ax=ax, color='b')
+    ax.set_title("Diagrama de Nyquist")
+    ax.set_xlabel("Re")
+    ax.set_ylabel("Im")
+    ax.grid(True)
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close(fig)
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    return jsonify({"nyquist_img": img_base64})
 
 if __name__ == '__main__':
     app.run(debug=True)
