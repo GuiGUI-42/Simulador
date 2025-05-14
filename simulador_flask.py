@@ -300,10 +300,14 @@ def atualizar_pagina4():
     u_perturb[T >= t_perturb_fechada] += amp_perturb_fechada
     _, yout_perturb = ctl.forced_response(G_closed, T, u_perturb)
 
+    # Resposta ao degrau da planta (malha aberta) para o mesmo vetor T
+    _, yout_open_interp = ctl.forced_response(G_planta, T, np.ones_like(T))
+
     plot_closed_data = {
         "data": [
             {"x": T.tolist(), "y": yout_closed.tolist(), "mode": "lines", "name": "Sem Perturbação"},
-            {"x": T.tolist(), "y": yout_perturb.tolist(), "mode": "lines", "name": "Com Perturbação"}
+            {"x": T.tolist(), "y": yout_perturb.tolist(), "mode": "lines", "name": "Com Perturbação"},
+            {"x": T.tolist(), "y": yout_open_interp.tolist(), "mode": "lines", "name": "Malha Aberta", "line": {"dash": "dash"}}
         ],
         "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
     }
@@ -468,12 +472,53 @@ def nyquist_pagina2():
 
     G_planta = ctl.tf(num_planta, den_planta)
 
-    fig, ax = plt.subplots(figsize=(5, 5))
+    fig, ax = plt.subplots(figsize=(7, 4))  # Apenas aumenta o tamanho, não altera escala
     ctl.nyquist_plot(G_planta, omega=np.logspace(-2, 2, 500), ax=ax, color='b')
     ax.set_title("Diagrama de Nyquist")
     ax.set_xlabel("Re")
     ax.set_ylabel("Im")
     ax.grid(True)
+    # Remova os set_xlim/set_ylim para manter a escala automática
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close(fig)
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    return jsonify({"nyquist_img": img_base64})
+
+@app.route('/nyquist_pagina4', methods=['POST'])
+def nyquist_pagina4():
+    data = request.get_json()
+    polos_planta = data.get("polos_planta", [-1])
+    zeros_planta = data.get("zeros_planta", [0])
+    polos_controlador = data.get("polos_controlador", [-1])
+    zeros_controlador = data.get("zeros_controlador", [0])
+    ganho_controlador = float(data.get("ganho_controlador", 1.0))
+
+    zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    polos_planta_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
+    zeros_controlador_filtrados = [z for z in zeros_controlador if abs(z) > 1e-8]
+    polos_controlador_filtrados = [p for p in polos_controlador if abs(p) > 1e-8]
+
+    num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
+    den_planta = np.poly(polos_planta_filtrados) if polos_planta_filtrados else np.array([1.0])
+    num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
+    num_controlador = ganho_controlador * num_controlador
+    den_controlador = np.poly(polos_controlador_filtrados) if polos_controlador_filtrados else np.array([1.0])
+
+    num_open = np.polymul(num_planta, num_controlador)
+    den_open = np.polymul(den_planta, den_controlador)
+    G_open = ctl.tf(num_open, den_open)
+
+    fig, ax = plt.subplots(figsize=(7, 4))  # Apenas aumenta o tamanho, não altera escala
+    ctl.nyquist_plot(G_open, omega=np.logspace(-2, 2, 500), ax=ax, color='b')
+    ax.set_title("Diagrama de Nyquist")
+    ax.set_xlabel("Re")
+    ax.set_ylabel("Im")
+    ax.grid(True)
+    # Remova os set_xlim/set_ylim para manter a escala automática
     plt.tight_layout()
 
     buf = io.BytesIO()
