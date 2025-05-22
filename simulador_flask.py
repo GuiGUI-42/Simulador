@@ -16,6 +16,7 @@ import control as ctl
 import json 
 import smtplib
 from email.mime.text import MIMEText
+import scipy.signal
 
 app = Flask(__name__)
 
@@ -111,10 +112,10 @@ def atualizar():
 @app.route('/atualizar_bode', methods=['POST'])
 def atualizar_bode():
     data = request.get_json()
-    polos_planta = data.get("polos_planta", [-1])
-    zeros_planta = data.get("zeros_planta", [0])
-    polos_controlador = data.get("polos_controlador", [-1])
-    zeros_controlador = data.get("zeros_controlador", [0])
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
+    polos_controlador = [float(p) for p in data.get("polos_controlador", [-1])]
+    zeros_controlador = [float(z) for z in data.get("zeros_controlador", [0])]
     ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
     print("polos_planta:", polos_planta)
@@ -222,10 +223,10 @@ def atualizar_nyquist():
 @app.route('/atualizar_pagina4', methods=['POST'])
 def atualizar_pagina4():
     data = request.get_json()
-    polos_planta = data.get("polos_planta", [-1])
-    zeros_planta = data.get("zeros_planta", [0])
-    polos_controlador = data.get("polos_controlador", [-1])
-    zeros_controlador = data.get("zeros_controlador", [0])
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
+    polos_controlador = [float(p) for p in data.get("polos_controlador", [-1])]
+    zeros_controlador = [float(z) for z in data.get("zeros_controlador", [0])]
     ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
     t_perturb_fechada = float(data.get("t_perturb_fechada", 20))
@@ -333,6 +334,19 @@ def atualizar_pagina4():
         f"\\[ G_c(s) = \\frac{{{latex_monic(num_controlador, 's')}}}{{{latex_monic(den_controlador, 's')}}} \\ ]"
     )
 
+    # Use os zeros/polos do input diretamente para a fração parcial
+    num_planta_parcial = np.poly(zeros_planta) if zeros_planta else np.array([1.0])
+    den_planta_parcial = np.poly(polos_planta) if polos_planta else np.array([1.0])
+    num_controlador_parcial = ganho_controlador * (np.poly(zeros_controlador) if zeros_controlador else np.array([1.0]))
+    den_controlador_parcial = np.poly(polos_controlador) if polos_controlador else np.array([1.0])
+
+    latex_planta_parcial = (
+        f"\\[ G(s) = {latex_partial_fraction(num_planta_parcial, den_planta_parcial, 's')} \\]"
+    )
+    latex_controlador_parcial = (
+        f"\\[ G_c(s) = {latex_partial_fraction(num_controlador_parcial, den_controlador_parcial, 's')} \\]"
+    )
+
     return jsonify({
         "latex_planta_monomial": latex_planta_monomial,
         "latex_controlador": latex_controlador,
@@ -344,14 +358,16 @@ def atualizar_pagina4():
         "latex_planta_fatorada": latex_planta_fatorada,
         "latex_controlador_polinomial": latex_controlador_polinomial,
         "latex_controlador_monic": latex_controlador_monic,
-        "latex_controlador_fatorada": latex_controlador_fatorada
+        "latex_controlador_fatorada": latex_controlador_fatorada,
+        "latex_planta_parcial": latex_planta_parcial,
+        "latex_controlador_parcial": latex_controlador_parcial
     })
 
 @app.route('/atualizar_pagina2', methods=['POST'])
 def atualizar_pagina2():
     data = request.get_json()
-    polos_planta = data.get("polos_planta", [-1])
-    zeros_planta = data.get("zeros_planta", [0])
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
 
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
     num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
@@ -460,11 +476,31 @@ def latex_factored(roots, var='s'):
             termos.append(f"({var} - {abs(r):.3g})")
     return "".join(termos)
 
+def latex_partial_fraction(num, den, var='s'):
+    num = np.trim_zeros(num, 'f')
+    den = np.trim_zeros(den, 'f')
+    if len(num) == 0 or len(den) == 0:
+        return "0"
+    r, p, k = scipy.signal.residue(num, den)
+    termos = []
+    for ri, pi in zip(r, p):
+        ri = np.round(ri, 4)
+        pi = np.round(pi, 4)
+        if abs(ri.imag) < 1e-8:
+            termos.append(f"\\frac{{{ri.real}}}{{{var} - ({pi.real})}}")
+        else:
+            termos.append(f"\\frac{{{ri}}}{{{var} - ({pi})}}")
+    if k is not None and len(k) > 0:
+        for i, ki in enumerate(k):
+            if abs(ki) > 1e-8:
+                termos.append(f"{ki:.4g}{var}^{len(k)-i-1}")
+    return " + ".join(termos) if termos else "0"
+
 @app.route('/nyquist_pagina2', methods=['POST'])
 def nyquist_pagina2():
     data = request.get_json()
-    polos_planta = data.get("polos_planta", [-1])
-    zeros_planta = data.get("zeros_planta", [0])
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
 
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
     num_planta = np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else np.array([1.0])
@@ -491,10 +527,10 @@ def nyquist_pagina2():
 @app.route('/nyquist_pagina4', methods=['POST'])
 def nyquist_pagina4():
     data = request.get_json()
-    polos_planta = data.get("polos_planta", [-1])
-    zeros_planta = data.get("zeros_planta", [0])
-    polos_controlador = data.get("polos_controlador", [-1])
-    zeros_controlador = data.get("zeros_controlador", [0])
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
+    polos_controlador = [float(p) for p in data.get("polos_controlador", [-1])]
+    zeros_controlador = [float(z) for z in data.get("zeros_controlador", [0])]
     ganho_controlador = float(data.get("ganho_controlador", 1.0))
 
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
@@ -529,4 +565,5 @@ def nyquist_pagina4():
     return jsonify({"nyquist_img": img_base64})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    #app.un(debug=True)
+    app.run(debug=True, host='0.0.0.0')

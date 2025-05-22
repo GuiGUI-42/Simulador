@@ -8,15 +8,37 @@
     </script>
     <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
     <link rel="stylesheet" href="/static/css/slider-style.css">
-    <meta name="viewport" content="width=device-width, initial-scale=0.8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    .right-section {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+    .left-section {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+    html, body {
+        height: 100%;
+        overflow-y: auto;
+    }
+    .main-container {
+        align-items: flex-start !important;
+    }
+    </style>
 </head>
-<body style="margin:0; min-height:100vh; background:#f3f3f7; display:flex; flex-direction:column; align-items:center;">
+<body style="margin:0; background:#f3f3f7;">
     <!-- Menu de hambúrguer -->
-    <div class="menu">
-        <div class="menu-icon"></div>
-        <div class="menu-icon"></div>
-        <div class="menu-icon"></div>
+    <div class="menu" style="position:fixed; top:8px; left:8px; z-index:1000;">
+        <div style="display:flex; flex-direction:column; margin-right:8px;">
+            <div class="menu-icon"></div>
+            <div class="menu-icon"></div>
+            <div class="menu-icon"></div>
+        </div>
         <div class="menu-content">
+            <h1 style="margin:0 0 16px 0; font-size:2em; font-weight:bold;">SisCo</h1>
             <label>
                 <input id="dark-mode-toggle" type="checkbox">
                 Ativar Modo Escuro
@@ -26,26 +48,26 @@
         </div>
     </div>
 
-    <!-- Título centralizado -->
-    <div style="text-align: center; margin-top: 16px; margin-bottom: 8px;">
-        <h1 style="margin: 0;">SisCo</h1>
-    </div>
+    <!-- Espaço para não sobrepor o conteúdo -->
+    <div style="height:56px;"></div>
 
     <!-- Container principal ocupando toda a tela -->
     <div class="main-container" style="
         display: flex;
         flex-direction: row;
         gap: 24px;
-        height: calc(100vh - 72px); /* Ajuste se o título for maior/menor */
         width: 100vw;
         align-items: stretch;
         box-sizing: border-box;
         justify-content: center;
+        padding-left: 24px;
+        padding-right: 24px;
     ">
         <!-- Seção Esquerda -->
         <div class="left-section" style="
-            flex: 1;
-            overflow-y: auto;
+            flex: 0 0 30%;
+            width: 30%;
+            overflow: visible; /* Garante que não há scroll interno */
             padding: 16px;
             box-sizing: border-box;
             background: #fff;
@@ -53,7 +75,7 @@
             box-shadow: 0 2px 8px #0001;
             min-width: 350px;
             /* max-width removido */
-            height: 100%;
+            /* height: 100%;  Removido para scroll global */
             margin-bottom: 0;
         ">
             <div id="parametros-fixos">
@@ -67,118 +89,49 @@
                         <option value="3">3ª Ordem</option>
                     </select>
                 </div>
-                <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
-                    <label style="display: flex; align-items: center; flex: 1;">
-                        <input type="checkbox" id="mostrar-malha-aberta" checked style="margin-right: 6px;">
-                        Mostrar Resposta ao Degrau (Malha Aberta)
-                    </label>
-                    <label style="display: flex; align-items: center; flex: 1;">
-                        <input type="checkbox" id="mostrar-pz" checked style="margin-right: 6px;">
-                        Mostrar Diagrama de Polos e Zeros
-                    </label>
-                </div>
-                <div style="margin: 10px 0; display: flex; justify-content: space-between; width: 100%;">
-                    <label style="display: flex; align-items: center; flex: 1;">
-                        <input type="checkbox" id="mostrar-bode" checked style="margin-right: 6px;">
-                        Mostrar Diagrama de Bode
-                    </label>
-                    <label style="display: flex; align-items: center; flex: 1;">
-                        <input type="checkbox" id="mostrar-nyquist" checked style="margin-right: 6px;">
-                        Mostrar Diagrama de Nyquist
-                    </label>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <!-- Parâmetros da Planta -->
-                    <div style="width: 48%;">
+                <div style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start;">
+                    <div style="width: 100%;">
                         <h4>Parâmetros da Planta</h4>
-                        <div id="planta-sliders"></div>
-                    </div>
-                    <!-- Parâmetros do Controlador -->
-                    <div style="width: 48%;">
-                        <h4>Parâmetros do Controlador</h4>
-                        <div class="slider-container">
-                            <label class="slider-label">
-                                <span>Ganho do Controlador (K):</span>
-                            </label>
-                            <input id="ganho-controlador" type="range" min="-10" max="20" step="0.01" value="1">
-                            <input id="ganho-controlador-input" type="number" min="0" max="10" step="0.01" value="1" style="width: 80px; margin-left: 10px;">
+                        <div style="display: flex; gap: 24px;">
+                            <!-- Coluna de Polos da Planta -->
+                            <div>
+                                <div style="font-weight:bold; margin-bottom:4px;">Polos</div>
+                                <div id="planta-polos-col">
+                                    <!-- Polos da planta serão inseridos aqui -->
+                                </div>
+                            </div>
+                            <!-- Coluna de Zeros da Planta -->
+                            <div>
+                                <div style="font-weight:bold; margin-bottom:4px;">Zeros</div>
+                                <div id="planta-zeros-col">
+                                    <!-- Zeros da planta serão inseridos aqui -->
+                                </div>
+                            </div>
                         </div>
-                        <div id="controlador-sliders"></div>
+                        <!-- FT da Planta embaixo dos parâmetros, container maior -->
+                        <div style="width: 100%; min-width: 320px; max-width: 520px; margin-top: 12px;">
+                            <b>Função de Transferência da Planta:</b>
+                            <select id="select-ft-planta" style="margin-left: 8px;">
+                                <option value="fatorada">Fatorada</option>
+                                <option value="polinomial">Polinomial</option>
+                                <option value="parcial">Fração Parcial</option>
+                            </select>
+                            <div id="ft-planta-fatorada" class="latex-container" style="margin-top: 8px; word-break: break-word;"></div>
+                            <div id="ft-planta-polinomial" class="latex-container" style="margin-top: 8px; display: none; word-break: break-word;"></div>
+                            <div id="ft-planta-parcial" class="latex-container" style="margin-top: 8px; display: none; word-break: break-word;"></div>
+                        </div>
                     </div>
+                    <!-- Remova o antigo container FT da planta ao lado -->
                 </div>
-            </div>
-            <h3>Funções de Transferência</h3>
-            <div style="position: relative; margin-bottom: 16px;">
-                <b>Planta:</b>
-                <div id="latex_planta_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
-                    Carregando forma fatorada...
-                </div>
-                <!-- Seta para expandir -->
-                <button id="seta-ft-planta" title="Mostrar/ocultar forma polinomial"
-                    style="
-                        position: absolute;
-                        right: 8px;
-                        bottom: 8px;
-                        background: none;
-                        border: none;
-                        cursor: pointer;
-                        font-size: 1.5em;
-                        color: #2196f3;
-                        z-index: 10;
-                        transition: color 0.2s;
-                    ">
-                    &#x25BC;
-                </button>
-                <div id="latex_planta_polinomial" class="latex-container" style="display: none;">
-                    Carregando forma polinomial...
-                </div>
-            </div>
-            <div style="position: relative; margin-bottom: 16px;">
-                <b>Controlador:</b>
-                <div id="latex_controlador_fatorada" class="latex-container" style="transition: box-shadow 0.2s;">
-                    Carregando forma fatorada...
-                </div>
-                <!-- Seta para expandir -->
-                <button id="seta-ft-controlador" title="Mostrar/ocultar forma polinomial"
-                    style="
-                        position: absolute;
-                        right: 8px;
-                        bottom: 8px;
-                        background: none;
-                        border: none;
-                        cursor: pointer;
-                        font-size: 1.5em;
-                        color: #2196f3;
-                        z-index: 10;
-                        transition: color 0.2s;
-                    ">
-                    &#x25BC;
-                </button>
-                <div id="latex_controlador_polinomial" class="latex-container" style="display: none;">
-                    Carregando forma polinomial...
-                </div>
-            </div>
-            <div class="section">
-                <h3>Perturbação (Malha Fechada)</h3>
-                <div id="slider2d-fechada" class="slider2d-box">
-                    <div id="slider2d-point-fechada"></div>
-                    <span class="slider2d-label slider2d-label-left">
-                        Tempo:
-                        <input id="input-t-fechada" type="number" min="0" max="50" step="0.01" style="width:60px; margin-left:6px;">
-                    </span>
-                    <span class="slider2d-label slider2d-label-right">
-                        Amplitude:
-                        <input id="input-a-fechada" type="number" min="-2" max="2" step="0.01" style="width:60px; margin-left:6px;">
-                    </span>
-                    <span class="slider2d-hint">Arraste o ponto laranja</span>
-                </div>
+                <!-- Removido: bloco de parâmetros do controlador e FT do controlador da coluna esquerda -->
             </div>
         </div>
 
         <!-- Seção Direita -->
         <div class="right-section" style="
-            flex: 1;
-            overflow-y: auto;
+            flex: 1 1 0;
+            width: 0;
+            overflow: visible; /* Garante que não há scroll interno */
             padding: 16px;
             box-sizing: border-box;
             background: #fff;
@@ -186,21 +139,102 @@
             box-shadow: 0 2px 8px #0001;
             min-width: 350px;
             /* max-width removido */
-            height: 100%;
+            /* height removido para scroll global */
             margin-bottom: 0;
+            display: flex;
+            flex-direction: column;
         ">
             <h3>Gráficos</h3>
-            <h4>Diagrama de Polos e Zeros</h4>
+
+            <!-- Resposta ao Degrau (Malha Fechada) - AGORA COM CONTAINER E INPUTS -->
+            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                <button id="seta-grafico-closed" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
+                <h4 style="margin: 0 8px 0 0;">Resposta ao Degrau (Malha Fechada)</h4>
+            </div>
+            <div id="container-plot-closed" style="margin-bottom: 16px;">
+                <div style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 10px;">
+                    <!-- Parâmetros do Controlador e Perturbação à esquerda -->
+                    <div style="min-width:320px; flex: 1; display: flex; flex-direction: column;">
+                        <div>
+                            <h4 style="margin:0 0 8px 0;">Parâmetros do Controlador</h4>
+                            <div style="display: flex; gap: 24px;">
+                                <!-- Coluna de Polos -->
+                                <div>
+                                    <div style="font-weight:bold; margin-bottom:4px;">Polos</div>
+                                    <div id="controlador-polos-col">
+                                        <!-- Polos do controlador serão inseridos aqui -->
+                                    </div>
+                                </div>
+                                <!-- Coluna de Zeros -->
+                                <div>
+                                    <div style="font-weight:bold; margin-bottom:4px;">Zeros</div>
+                                    <div id="controlador-zeros-col">
+                                        <!-- Zeros do controlador serão inseridos aqui -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 12px; margin-top: 12px;">
+                                <span>Ganho do Controlador (K):</span>
+                                <input id="ganho-controlador" type="number" min="-10" max="20" step="0.01" value="1" style="width: 80px; margin-left: 8px;">
+                            </div>
+                        </div>
+                        <!-- Parâmetros da Perturbação -->
+                        <div style="margin-top: 24px;">
+                            <h4 style="margin:0 0 8px 0;">Parâmetros da Perturbação</h4>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                                <label for="input-t-fechada-grafico">Tempo:</label>
+                                <input id="input-t-fechada-grafico" type="number" min="0" max="50" step="0.1" value="20" style="width: 60px;">
+                                <label for="input-a-fechada-grafico">Amplitude:</label>
+                                <input id="input-a-fechada-grafico" type="number" min="-2" max="2" step="0.01" value="0" style="width: 60px;">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- FT do Controlador à direita, próxima dos parâmetros -->
+                    <div style="min-width:260px; flex: 1; display: flex; flex-direction: column; justify-content: flex-start;">
+                        <div>
+                            <b>Função de Transferência do Controlador:</b>
+                            <select id="select-ft-controlador" style="margin-left: 8px;">
+                                <option value="fatorada">Fatorada</option>
+                                <option value="polinomial">Polinomial</option>
+                                <option value="parcial">Fração Parcial</option>
+                            </select>
+                            <div id="ft-controlador-fatorada" class="latex-container" style="margin-top: 8px; word-break: break-word; max-width: 100%;"></div>
+                            <div id="ft-controlador-polinomial" class="latex-container" style="margin-top: 8px; display: none; word-break: break-word; max-width: 100%;"></div>
+                            <div id="ft-controlador-parcial" class="latex-container" style="margin-top: 8px; display: none; word-break: break-word; max-width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="plot_closed"></div>
+            </div>
+
+            <!-- Diagrama de Polos e Zeros -->
+            <div style="display: flex; align-items: center; margin-bottom: 4px; margin-top: 16px;">
+                <button id="seta-grafico-pz" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
+                <h4 style="margin: 0 8px 0 0;">Diagrama de Polos e Zeros</h4>
+            </div>
             <div id="plot_pz"></div>
+
+            <!-- Resposta ao Degrau (Malha Aberta) -->
             <div id="malha-aberta-container">
-                <h4>Resposta ao Degrau (Malha Aberta)</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 4px; margin-top: 16px;">
+                    <button id="seta-grafico-malha-aberta" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
+                    <h4 style="margin: 0 8px 0 0;">Resposta ao Degrau (Malha Aberta)</h4>
+                </div>
                 <div id="plot_open"></div>
             </div>
-            <h4>Resposta ao Degrau (Malha Fechada)</h4>
-            <div id="plot_closed"></div>
-            <h4>Diagrama de Bode</h4>
+
+            <!-- Diagrama de Bode -->
+            <div style="display: flex; align-items: center; margin-bottom: 4px; margin-top: 16px;">
+                <button id="seta-grafico-bode" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
+                <h4 style="margin: 0 8px 0 0;">Diagrama de Bode</h4>
+            </div>
             <div id="plot_bode"></div>
-            <h4>Diagrama de Nyquist</h4>
+
+            <!-- Diagrama de Nyquist -->
+            <div style="display: flex; align-items: center; margin-bottom: 4px; margin-top: 16px;">
+                <button id="seta-grafico-nyquist" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
+                <h4 style="margin: 0 8px 0 0;">Diagrama de Nyquist</h4>
+            </div>
             <div id="nyquist-img-container">
                 <img id="nyquist-img" src="" alt="Diagrama de Nyquist" style="max-width:100%;border:1px solid #ccc;">
             </div>
@@ -219,91 +253,69 @@
     <script>
     function atualizarSliders() {
         const ordem = parseInt(document.getElementById("ordem-sistema").value);
-        const plantaSliders = document.getElementById("planta-sliders");
-        const controladorSliders = document.getElementById("controlador-sliders");
-        plantaSliders.innerHTML = "";
-        controladorSliders.innerHTML = "";
+        // Separe polos/zeros da planta em colunas
+        const polosColPlanta = document.getElementById("planta-polos-col");
+        const zerosColPlanta = document.getElementById("planta-zeros-col");
+        // Separe polos/zeros do controlador em colunas
+        const polosCol = document.getElementById("controlador-polos-col");
+        const zerosCol = document.getElementById("controlador-zeros-col");
+        if (polosColPlanta) polosColPlanta.innerHTML = "";
+        if (zerosColPlanta) zerosColPlanta.innerHTML = "";
+        if (polosCol) polosCol.innerHTML = "";
+        if (zerosCol) zerosCol.innerHTML = "";
+
         for (let i = 1; i <= ordem; i++) {
-            plantaSliders.innerHTML += `
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Polo ${i} da Planta:</span>
-                    </label>
-                    <input id="polo-planta-${i}" type="range" min="-10" max="10" step="0.001" value="-1">
-                    <input id="polo-planta-input-${i}" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
-                </div>
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Zero ${i} da Planta:</span>
-                    </label>
-                    <input id="zero-planta-${i}" type="range" min="-10" max="10" step="0.001" value="0">
-                    <input id="zero-planta-input-${i}" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
-                </div>
-            `;
-            controladorSliders.innerHTML += `
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Polo ${i} do Controlador:</span>
-                    </label>
-                    <input id="polo-controlador-${i}" type="range" min="-10" max="10" step="0.001" value="-1">
-                    <input id="polo-controlador-input-${i}" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 10px;">
-                </div>
-                <div class="slider-container">
-                    <label class="slider-label">
-                        <span>Zero ${i} do Controlador:</span>
-                    </label>
-                    <input id="zero-controlador-${i}" type="range" min="-10" max="10" step="0.001" value="0">
-                    <input id="zero-controlador-input-${i}" type="number" step="0.001" value="0" style="width: 80px; margin-left: 10px;">
-                </div>
-            `;
+            // Planta
+            if (polosColPlanta) {
+                polosColPlanta.innerHTML += `
+                    <div style="margin-bottom: 12px;">
+                        <span>Polo ${i}:</span>
+                        <input id="polo-planta-input-${i}" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 8px;">
+                    </div>
+                `;
+            }
+            if (zerosColPlanta) {
+                zerosColPlanta.innerHTML += `
+                    <div style="margin-bottom: 12px;">
+                        <span>Zero ${i}:</span>
+                        <input id="zero-planta-input-${i}" type="number" step="0.001" value="0" style="width: 80px; margin-left: 8px;">
+                    </div>
+                `;
+            }
+            // Controlador
+            if (polosCol) {
+                polosCol.innerHTML += `
+                    <div style="margin-bottom: 12px;">
+                        <span>Polo ${i}:</span>
+                        <input id="polo-controlador-input-${i}" type="number" step="0.001" value="-1" style="width: 80px; margin-left: 8px;">
+                    </div>
+                `;
+            }
+            if (zerosCol) {
+                zerosCol.innerHTML += `
+                    <div style="margin-bottom: 12px;">
+                        <span>Zero ${i}:</span>
+                        <input id="zero-controlador-input-${i}" type="number" step="0.001" value="0" style="width: 80px; margin-left: 8px;">
+                    </div>
+                `;
+            }
         }
         adicionarEventosSliders(ordem);
+        atualizarTudo();
     }
 
     function adicionarEventosSliders(ordem) {
         for (let i = 1; i <= ordem; i++) {
             // Planta
-            let sliderP = document.getElementById(`polo-planta-${i}`);
             let inputP = document.getElementById(`polo-planta-input-${i}`);
-            sliderP.addEventListener('input', () => {
-                inputP.value = sliderP.value;
-                atualizarTudo(); // <-- Troque para atualizarTudo
-            });
-            inputP.addEventListener('input', () => {
-                sliderP.value = inputP.value;
-                atualizarTudo();
-            });
-            let sliderZ = document.getElementById(`zero-planta-${i}`);
+            inputP.addEventListener('input', atualizarTudo);
             let inputZ = document.getElementById(`zero-planta-input-${i}`);
-            sliderZ.addEventListener('input', () => {
-                inputZ.value = sliderZ.value;
-                atualizarTudo();
-            });
-            inputZ.addEventListener('input', () => {
-                sliderZ.value = inputZ.value;
-                atualizarTudo();
-            });
+            inputZ.addEventListener('input', atualizarTudo);
             // Controlador
-            let sliderPC = document.getElementById(`polo-controlador-${i}`);
             let inputPC = document.getElementById(`polo-controlador-input-${i}`);
-            sliderPC.addEventListener('input', () => {
-                inputPC.value = sliderPC.value;
-                atualizarTudo();
-            });
-            inputPC.addEventListener('input', () => {
-                sliderPC.value = inputPC.value;
-                atualizarTudo();
-            });
-            let sliderZC = document.getElementById(`zero-controlador-${i}`);
+            inputPC.addEventListener('input', atualizarTudo);
             let inputZC = document.getElementById(`zero-controlador-input-${i}`);
-            sliderZC.addEventListener('input', () => {
-                inputZC.value = sliderZC.value;
-                atualizarTudo();
-            });
-            inputZC.addEventListener('input', () => {
-                sliderZC.value = inputZC.value;
-                atualizarTudo();
-            });
+            inputZC.addEventListener('input', atualizarTudo);
         }
     }
 
@@ -315,11 +327,15 @@
         const zerosControlador = [];
         const ganhoControlador = parseFloat(document.getElementById('ganho-controlador').value);
         for (let i = 1; i <= ordem; i++) {
-            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-${i}`).value));
-            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-${i}`).value));
-            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-${i}`).value));
-            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-${i}`).value));
+            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-input-${i}`).value));
+            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-input-${i}`).value));
+            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-input-${i}`).value));
+            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-input-${i}`).value));
         }
+        // LEIA DIRETAMENTE DOS INPUTS
+        const t_perturb_fechada = parseFloat(document.getElementById('input-t-fechada-grafico').value);
+        const amp_perturb_fechada = parseFloat(document.getElementById('input-a-fechada-grafico').value);
+
         const data = {
             ordem: ordem,
             polos_planta: polosPlanta,
@@ -327,8 +343,8 @@
             polos_controlador: polosControlador,
             zeros_controlador: zerosControlador,
             ganho_controlador: ganhoControlador,
-            t_perturb_fechada: t_perturb_fechada,           // <-- adicione isto
-            amp_perturb_fechada: amp_perturb_fechada        // <-- adicione isto
+            t_perturb_fechada: t_perturb_fechada,
+            amp_perturb_fechada: amp_perturb_fechada
         };
         const res = await fetch('/atualizar_pagina4', {
             method: 'POST',
@@ -336,21 +352,60 @@
             body: JSON.stringify(data)
         });
         const json = await res.json();
-        document.getElementById("latex_planta_polinomial").innerHTML = json.latex_planta_polinomial || "Erro ao carregar forma polinomial";
-        document.getElementById("latex_planta_fatorada").innerHTML = json.latex_planta_fatorada || "Erro ao carregar forma fatorada";
-        document.getElementById("latex_controlador_polinomial").innerHTML = json.latex_controlador_polinomial || "Erro ao carregar forma polinomial";
-        document.getElementById("latex_controlador_fatorada").innerHTML = json.latex_controlador_fatorada || "Erro ao carregar forma fatorada";
+        console.log(json); // Para depuração
+
+        // Adicione checagem de campos antes de acessar
+        if (json.latex_planta_polinomial)
+            document.getElementById("ft-planta-polinomial").innerHTML = json.latex_planta_polinomial;
+        else
+            document.getElementById("ft-planta-polinomial").innerHTML = "Erro ao carregar forma polinomial";
+
+        if (json.latex_planta_fatorada)
+            document.getElementById("ft-planta-fatorada").innerHTML = json.latex_planta_fatorada;
+        else
+            document.getElementById("ft-planta-fatorada").innerHTML = "Erro ao carregar forma fatorada";
+
+        if (json.latex_planta_parcial)
+            document.getElementById("ft-planta-parcial").innerHTML = json.latex_planta_parcial;
+        else
+            document.getElementById("ft-planta-parcial").innerHTML = "Erro ao carregar fração parcial";
+
+        // Corrigido: renderização das FTs do controlador (faltava polinomial e fatorada)
+        if (json.latex_controlador_polinomial)
+            document.getElementById("ft-controlador-polinomial").innerHTML = json.latex_controlador_polinomial;
+        else
+            document.getElementById("ft-controlador-polinomial").innerHTML = "Erro ao carregar forma polinomial";
+
+        if (json.latex_controlador_fatorada)
+            document.getElementById("ft-controlador-fatorada").innerHTML = json.latex_controlador_fatorada;
+        else
+            document.getElementById("ft-controlador-fatorada").innerHTML = "Erro ao carregar forma fatorada";
+
+        if (json.latex_controlador_parcial)
+            document.getElementById("ft-controlador-parcial").innerHTML = json.latex_controlador_parcial;
+        else
+            document.getElementById("ft-controlador-parcial").innerHTML = "Erro ao carregar fração parcial";
+
+        // Atualiza a exibição das FTs conforme seleção
+        if (document.getElementById("select-ft-planta")._updateDisplay) {
+            document.getElementById("select-ft-planta")._updateDisplay();
+        }
+        if (document.getElementById("select-ft-controlador")._updateDisplay) {
+            document.getElementById("select-ft-controlador")._updateDisplay();
+        }
+
         if (window.MathJax) MathJax.typesetPromise();
 
-        // Plota os gráficos com o layout e cores já enviados pelo backend
-        Plotly.newPlot('plot_pz', json.plot_pz_data.data, json.plot_pz_data.layout);
-        Plotly.newPlot('plot_open', json.plot_open_data.data, json.plot_open_data.layout);
-        Plotly.newPlot('plot_closed', json.plot_closed_data.data, json.plot_closed_data.layout);
+        // Só plote se os dados existirem
+        if (json.plot_pz_data && json.plot_pz_data.data)
+            Plotly.newPlot('plot_pz', json.plot_pz_data.data, json.plot_pz_data.layout);
+        if (json.plot_open_data && json.plot_open_data.data)
+            Plotly.newPlot('plot_open', json.plot_open_data.data, json.plot_open_data.layout);
+        if (json.plot_closed_data && json.plot_closed_data.data)
+            Plotly.newPlot('plot_closed', json.plot_closed_data.data, json.plot_closed_data.layout);
 
-        // Mostra ou esconde conforme a caixa de seleção
-        const mostrar = document.getElementById('mostrar-malha-aberta').checked;
-        document.getElementById('plot_open').style.display = mostrar ? '' : 'none';
-        document.getElementById('malha-aberta-container').style.display = mostrar ? '' : 'none';
+        // Removido: checagem de checkboxes para exibir/ocultar gráficos
+        // Os gráficos serão controlados apenas pelas setas
     }
 
     async function atualizarBodeNyquist() {
@@ -362,10 +417,10 @@
         const ganhoControlador = parseFloat(document.getElementById('ganho-controlador').value);
 
         for (let i = 1; i <= ordem; i++) {
-            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-${i}`).value));
-            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-${i}`).value));
-            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-${i}`).value));
-            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-${i}`).value));
+            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-input-${i}`).value));
+            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-input-${i}`).value));
+            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-input-${i}`).value));
+            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-input-${i}`).value));
         }
 
         const data = {
@@ -406,34 +461,28 @@
     window.onload = () => {
         atualizarSliders();
         atualizarTudo();
-        document.getElementById('plot_pz').style.display = document.getElementById('mostrar-pz').checked ? '' : 'none';
-        document.getElementById('plot_bode').style.display = document.getElementById('mostrar-bode').checked ? '' : 'none';
-        document.getElementById('plot_nyquist').style.display = document.getElementById('mostrar-nyquist').checked ? '' : 'none';
+
+        // Inicialização das setas dos gráficos (agora dentro do onload!)
+        setaGraficoToggle('seta-grafico-pz', 'plot_pz');
+        setaGraficoToggle('seta-grafico-malha-aberta', 'plot_open');
+        setaGraficoToggle('seta-grafico-bode', 'plot_bode');
+        setaGraficoToggle('seta-grafico-nyquist', 'nyquist-img-container');
+        setaGraficoToggle('seta-grafico-closed', 'container-plot-closed');
+
+        // Deixe todos ocultos no início, exceto malha fechada
+        document.getElementById('plot_pz').style.display = 'none';
+        document.getElementById('plot_bode').style.display = 'none';
+        document.getElementById('nyquist-img-container').style.display = 'none';
+        document.getElementById('plot_open').style.display = 'none';
+        // Malha fechada sempre visível
+
+        // Adicione eventos dos sliders e inputs
+        document.getElementById("ordem-sistema").addEventListener("change", atualizarSliders);
+        document.getElementById('ganho-controlador').addEventListener('input', atualizarTudo);
+
+        setupFTSelect("select-ft-planta", "ft-planta-fatorada", "ft-planta-polinomial", "ft-planta-parcial");
+        setupFTSelect("select-ft-controlador", "ft-controlador-fatorada", "ft-controlador-polinomial", "ft-controlador-parcial");
     };
-    document.getElementById("ordem-sistema").addEventListener("change", () => {
-        atualizarSliders();
-        atualizarTudo();
-    });
-
-    // Mostra ou esconde o gráfico de malha aberta conforme a caixa de seleção
-    document.getElementById('mostrar-malha-aberta').addEventListener('change', function() {
-        const plotOpen = document.getElementById('plot_open');
-        plotOpen.style.display = this.checked ? '' : 'none';
-    });
-    document.getElementById('mostrar-malha-aberta').addEventListener('change', function() {
-        const container = document.getElementById('malha-aberta-container');
-        container.style.display = this.checked ? '' : 'none';
-    });
-
-    document.getElementById('mostrar-pz').addEventListener('change', function() {
-        document.getElementById('plot_pz').style.display = this.checked ? '' : 'none';
-    });
-    document.getElementById('mostrar-bode').addEventListener('change', function() {
-        document.getElementById('plot_bode').style.display = this.checked ? '' : 'none';
-    });
-    document.getElementById('mostrar-nyquist').addEventListener('change', function() {
-        document.getElementById('plot_nyquist').style.display = this.checked ? '' : 'none';
-    });
 
     // Menu e modo escuro (mantém igual)
     const menu = document.querySelector('.menu');
@@ -484,110 +533,76 @@
 
     // Após atualizarSliders() e adicionarEventosSliders()
     document.getElementById('ganho-controlador').addEventListener('input', function() {
-        document.getElementById('ganho-controlador-input').value = this.value;
-        atualizarTudo();
-    });
-    document.getElementById('ganho-controlador-input').addEventListener('input', function() {
-        document.getElementById('ganho-controlador').value = this.value;
         atualizarTudo();
     });
 
-    // --- Slider 2D para perturbação em malha fechada ---
-    const slider2dFechada = document.getElementById('slider2d-fechada');
-    const pointFechada = document.getElementById('slider2d-point-fechada');
-    const tLabelFechada = document.getElementById('slider2d-t-fechada');
-    const aLabelFechada = document.getElementById('slider2d-a-fechada');
-    const inputTFechada = document.getElementById('input-t-fechada');
-    const inputAFechada = document.getElementById('input-a-fechada');
-    const tMinF = 0, tMaxF = 50;
-    const aMinF = -2, aMaxF = 2;
-    let t_perturb_fechada = 20, amp_perturb_fechada = 0.0;
+    // Inputs manuais (apenas inputs da direita)
+    const inputTFechadaGrafico = document.getElementById('input-t-fechada-grafico');
+    const inputAFechadaGrafico = document.getElementById('input-a-fechada-grafico');
 
-    function getSlider2dFechadaSize() {
-        const rect = slider2dFechada.getBoundingClientRect();
-        return { width: rect.width, height: 120 };
-    }
+    inputTFechadaGrafico.addEventListener('input', atualizarTudo);
+    inputAFechadaGrafico.addEventListener('input', atualizarTudo);
 
-    function updateSlider2dFechada(updateInputs=true) {
-        const { width, height } = getSlider2dFechadaSize();
-        const x = ((t_perturb_fechada - tMinF) / (tMaxF - tMinF)) * (width - 18);
-        const y = ((aMaxF - amp_perturb_fechada) / (aMaxF - aMinF)) * (height - 18);
-        pointFechada.style.left = x + "px";
-        pointFechada.style.top = y + "px";
-        if(updateInputs) {
-            inputTFechada.value = t_perturb_fechada.toFixed(2);
-            inputAFechada.value = amp_perturb_fechada.toFixed(2);
+    // Função para alternar exibição das FTs conforme seleção
+    function setupFTSelect(selectId, fatoradaId, polinomialId, parcialId) {
+        const select = document.getElementById(selectId);
+        const fatorada = document.getElementById(fatoradaId);
+        const polinomial = document.getElementById(polinomialId);
+        const parcial = document.getElementById(parcialId);
+
+        function updateDisplay() {
+            fatorada.style.display = select.value === "fatorada" ? "" : "none";
+            polinomial.style.display = select.value === "polinomial" ? "" : "none";
+            parcial.style.display = select.value === "parcial" ? "" : "none";
+            // Garante renderização MathJax após troca
+            if (window.MathJax) MathJax.typesetPromise();
         }
+        // Atualiza ao trocar seleção
+        select.addEventListener('change', updateDisplay);
+        // Atualiza sempre que o conteúdo das FTs mudar (após atualizar())
+        select._updateDisplay = updateDisplay;
+        updateDisplay();
     }
 
-    // Drag & drop
-    let draggingFechada = false;
-    pointFechada.onmousedown = function(e) {
-        draggingFechada = true;
-        document.body.style.userSelect = "none";
-    };
-    document.onmouseup = function() {
-        draggingFechada = false;
-        document.body.style.userSelect = "";
-    };
-    document.onmousemove = function(e) {
-        if (!draggingFechada) return;
-        const rect = slider2dFechada.getBoundingClientRect();
-        const width = rect.width, height = rect.height;
-        let x = e.clientX - rect.left - 9;
-        let y = e.clientY - rect.top - 9;
-        x = Math.max(0, Math.min(x, width - 18));
-        y = Math.max(0, Math.min(y, height - 18));
-        t_perturb_fechada = tMinF + (x / (width - 18)) * (tMaxF - tMinF);
-        amp_perturb_fechada = aMaxF - (y / (height - 18)) * (aMaxF - aMinF);
-        updateSlider2dFechada();
-        atualizar();
-    };
+    // Setas para mostrar/ocultar gráficos
+    function setaGraficoToggle(setaId, divId) {
+        const seta = document.getElementById(setaId);
+        const div = document.getElementById(divId);
+        let visivel = false;
+        seta.onclick = function() {
+            visivel = !visivel;
+            div.style.display = visivel ? '' : 'none';
+            seta.innerHTML = visivel ? '&#x25B2;' : '&#x25BC;';
+        };
+        // Inicializa oculto
+        div.style.display = 'none';
+        seta.innerHTML = '&#x25BC;';
+    }
 
-    // Inputs manuais
-    inputTFechada.addEventListener('input', function() {
-        let val = parseFloat(this.value);
-        if (isNaN(val)) return;
-        t_perturb_fechada = Math.max(tMinF, Math.min(val, tMaxF));
-        updateSlider2dFechada(false);
-        atualizar();
-    });
-    inputAFechada.addEventListener('input', function() {
-        let val = parseFloat(this.value);
-        if (isNaN(val)) return;
-        amp_perturb_fechada = Math.max(aMinF, Math.min(val, aMaxF));
-        updateSlider2dFechada(false);
-        atualizar();
-    });
+    // Inicialização única do frontend
+    window.onload = () => {
+        atualizarSliders();
+        atualizarTudo();
 
-    // Responsivo
-    window.addEventListener('resize', () => updateSlider2dFechada());
+        setaGraficoToggle('seta-grafico-pz', 'plot_pz');
+        setaGraficoToggle('seta-grafico-malha-aberta', 'plot_open');
+        setaGraficoToggle('seta-grafico-bode', 'plot_bode');
+        setaGraficoToggle('seta-grafico-nyquist', 'nyquist-img-container');
+        setaGraficoToggle('seta-grafico-closed', 'container-plot-closed');
 
-    // Inicializa
-    updateSlider2dFechada();
+        // Deixe todos ocultos no início, exceto malha fechada
+        document.getElementById('plot_pz').style.display = 'none';
+        document.getElementById('plot_bode').style.display = 'none';
+        document.getElementById('nyquist-img-container').style.display = 'none';
+        document.getElementById('plot_open').style.display = 'none';
 
-    // Adicione ao final do seu <script> ou após o updateSlider2dFechada()
-    const setaFtPlanta = document.getElementById('seta-ft-planta');
-    const polinomialDiv = document.getElementById('latex_planta_polinomial');
-    let polinomialVisivel = false;
+        document.getElementById("ordem-sistema").addEventListener("change", atualizarSliders);
+        document.getElementById('ganho-controlador').addEventListener('input', atualizarTudo);
 
-    setaFtPlanta.onclick = function() {
-        polinomialVisivel = !polinomialVisivel;
-        polinomialDiv.style.display = polinomialVisivel ? '' : 'none';
-        setaFtPlanta.innerHTML = polinomialVisivel ? '&#x25B2;' : '&#x25BC;';
+        setupFTSelect("select-ft-planta", "ft-planta-fatorada", "ft-planta-polinomial", "ft-planta-parcial");
+        setupFTSelect("select-ft-controlador", "ft-controlador-fatorada", "ft-controlador-polinomial", "ft-controlador-parcial");
     };
 
-    // Seta para expandir/recolher FT do controlador (agora fatorada é a principal)
-    const setaFtControlador = document.getElementById('seta-ft-controlador');
-    const fatoradaDivControlador = document.getElementById('latex_controlador_fatorada');
-    const polinomialDivControlador = document.getElementById('latex_controlador_polinomial');
-    let fatoradaVisivelControlador = false;
-
-    setaFtControlador.onclick = function() {
-        fatoradaVisivelControlador = !fatoradaVisivelControlador;
-        polinomialDivControlador.style.display = fatoradaVisivelControlador ? '' : 'none';
-        setaFtControlador.innerHTML = fatoradaVisivelControlador ? '&#x25B2;' : '&#x25BC;';
-    };
     </script>
 </body>
 </html>
