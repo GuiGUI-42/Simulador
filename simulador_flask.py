@@ -34,6 +34,10 @@ def pagina2():
 def pagina4():
     return render_template('pagina4.html')
 
+@app.route('/blocos')
+def blocos():
+    return render_template('bloco.html')
+
 @app.route('/atualizar', methods=['POST'])
 def atualizar():
     data = request.get_json()
