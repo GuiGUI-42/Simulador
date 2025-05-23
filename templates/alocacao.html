@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Alocação de Polos Interativa</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+        }
+        .main-flex {
+            display: flex;
+            flex-direction: row;
+            gap: 32px;
+            align-items: flex-start;
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .side-col {
+            flex: 1 1 350px;
+            min-width: 340px;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #0001;
+            padding: 24px 24px 16px 24px;
+            margin-bottom: 0;
+        }
+        .center-col {
+            flex: 2 1 700px;
+            min-width: 500px;
+            max-width: 900px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #0001;
+            padding: 24px 24px 16px 24px;
+            margin-bottom: 0;
+        }
+        .box { border: 1px solid #ccc; border-radius: 8px; padding: 16px; margin: 16px 0; background: #f9f9f9; }
+        .highlight { background: #e6f7ff; padding: 8px; border-radius: 4px; }
+        .latex { font-size: 1.2em; margin: 8px 0; }
+        .input-inline { width: 80px; font-size: 1em; padding: 2px 4px; margin: 2px 4px; }
+        .param-list { margin-bottom: 8px; }
+        .param-list label { font-weight: bold; }
+        .param-row { margin-bottom: 4px; }
+        .remove-btn { color: #fff; background: #d9534f; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
+        .add-btn { color: #fff; background: #5cb85c; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
+        .info-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background: #0074d9;
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 6px;
+            font-size: 14px;
+            line-height: 18px;
+            position: relative;
+        }
+        .info-tooltip {
+            display: none;
+            position: absolute;
+            background: #fff;
+            color: #333;
+            border: 1px solid #0074d9;
+            border-radius: 6px;
+            padding: 8px;
+            z-index: 10;
+            width: 320px;
+            left: 25px;
+            top: -10px;
+            font-size: 0.95em;
+        }
+        .info-icon:hover .info-tooltip {
+            display: block;
+        }
+        .row-flex { display: flex; align-items: center; gap: 10px; }
+        .ft-block { margin-bottom: 24px; }
+        .section-title { font-size: 1.2em; font-weight: bold; margin-bottom: 12px; }
+        @media (max-width: 1100px) {
+            .main-flex { flex-direction: column; }
+            .center-col, .side-col { max-width: 100%; min-width: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h2 style="margin-left:32px; margin-top:24px;">
+        Alocação de Polos - Interativa
+        <span class="info-icon">i
+            <span class="info-tooltip">
+                Adicione/remova polos e zeros da planta e do controlador, ajuste o ganho do controlador e veja em tempo real o impacto nos diagramas e respostas do sistema.<br>
+                Também veja o tempo de assentamento (5%) da malha aberta e defina o tempo desejado para a malha fechada.
+            </span>
+        </span>
+    </h2>
+
+    <div class="main-flex">
+        <div class="side-col">
+            <div class="section-title">Parâmetros da Planta</div>
+            <div class="param-list">
+                <label>Polos da Planta:</label>
+                <span class="info-icon">i
+                    <span class="info-tooltip">
+                        Polos determinam a estabilidade e a velocidade de resposta da planta.
+                    </span>
+                </span>
+                <div id="planta-polos-list"></div>
+                <button class="add-btn" onclick="addParam('planta-polos')">Adicionar Polo</button>
+            </div>
+            <div class="param-list">
+                <label>Zeros da Planta:</label>
+                <span class="info-icon">i
+                    <span class="info-tooltip">
+                        Zeros podem modificar a forma da resposta transitória.
+                    </span>
+                </span>
+                <div id="planta-zeros-list"></div>
+                <button class="add-btn" onclick="addParam('planta-zeros')">Adicionar Zero</button>
+            </div>
+            <div style="margin: 24px 0 24px 0;">
+                <span class="latex" id="latex-planta"></span>
+            </div>
+            <div class="section-title">Parâmetros do Controlador</div>
+            <div class="param-list">
+                <label>Polos do Controlador:</label>
+                <span class="info-icon">i
+                    <span class="info-tooltip">
+                        Polos do controlador afetam a dinâmica do sistema em malha fechada.
+                    </span>
+                </span>
+                <div id="controlador-polos-list"></div>
+                <button class="add-btn" onclick="addParam('controlador-polos')">Adicionar Polo</button>
+            </div>
+            <div class="param-list">
+                <label>Zeros do Controlador:</label>
+                <span class="info-icon">i
+                    <span class="info-tooltip">
+                        Zeros do controlador podem ser usados para cancelar polos indesejados da planta.
+                    </span>
+                </span>
+                <div id="controlador-zeros-list"></div>
+                <button class="add-btn" onclick="addParam('controlador-zeros')">Adicionar Zero</button>
+            </div>
+            <div class="param-list">
+                <label>Ganho da Planta (K<sub>g</sub>):</label>
+                <input type="number" id="ganho-planta" class="input-inline" value="1.0" step="0.01" onchange="updateAll()">
+            </div>
+            <div class="param-list">
+                <label>Ganho do Controlador (K<sub>c</sub>):</label>
+                <input type="number" id="ganho-controlador" class="input-inline" value="1.0" step="0.01" onchange="updateAll()">
+            </div>
+            <div style="margin: 24px 0 24px 0;">
+                <span class="latex" id="latex-controlador"></span>
+            </div>
+        </div>
+        <div class="center-col">
+            <div style="margin-bottom: 32px;">
+                <label style="font-weight:bold;">Diagrama de Polos e Zeros (Malha Fechada):</label>
+                <div id="plot-pz" style="margin-top:16px; width:100%; min-height:420px; height:420px; max-height:520px;"></div>
+            </div>
+            <div class="box highlight" style="margin-bottom: 32px;">
+                <div class="row-flex">
+                    <label>Tempo de assentamento (5%) da malha aberta:</label>
+                    <input type="text" id="ts-aberta" class="input-inline" readonly>
+                </div>
+                <div class="row-flex">
+                    <label>Tempo de assentamento desejado (malha fechada, 2x mais rápido):</label>
+                    <input type="text" id="ts-fechada" class="input-inline" readonly>
+                </div>
+                <div class="row-flex">
+                    <label>Polinômio característico atual:</label>
+                    <span class="latex" id="poly-caracteristico"></span>
+                    <span class="info-icon" onclick="abrirModalPmf()" style="cursor:pointer;">i</span>
+                </div>
+                <div class="row-flex" style="margin-top:8px;">
+                    <label>P<sub>d</sub>:</label>
+                    <span class="latex" id="pd-value"></span>
+                    <span style="margin-left:12px; font-size:0.98em;">(P<sub>d</sub> = 3 / T<sub>5</sub>)</span>
+                </div>
+                <div id="poly-desejado-expl" style="margin-top:18px; font-size:1.08em; background:#f6fafd; border-radius:6px; padding:10px 16px;">
+                    <b>Polinômio desejado:</b>
+                    <span class="latex" id="poly-desejado-latex"></span>
+                    <div style="margin-top:8px; font-size:0.98em;">
+                        <b>Como chegar no polinômio desejado?</b><br>
+                        <ul style="margin: 6px 0 0 18px; padding-left:0;">
+                            <li>Observe o polinômio desejado acima, que depende dos polos da planta e do tempo de assentamento desejado.</li>
+                            <li>Para atingir o polinômio desejado, ajuste os parâmetros do controlador (polos, zeros e ganho) de modo que o polinômio característico atual fique igual ao desejado.</li>
+                            <li>Use as fórmulas do <b>modal</b> (<span class="info-icon" id="pmf-modal-trigger" style="cursor:pointer;">i</span>) para calcular os parâmetros do controlador necessários.</li>
+                            <li>Exemplo: para planta de 1ª ordem e controlador PI, iguale os coeficientes do polinômio característico atual ao desejado e resolva para o ganho e zero do controlador.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="box" style="margin-bottom: 32px;">
+                <label>Resposta ao Degrau (Malha Aberta):</label>
+                <div id="plot-open" style="width:100%; min-height:320px; height:320px;"></div>
+            </div>
+            <div class="box">
+                <label>Resposta ao Degrau (Malha Fechada):</label>
+                <div id="plot-closed" style="width:100%; min-height:320px; height:320px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal PMF -->
+    <div id="modal-pmf" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); z-index:1000;">
+        <div style="background:#fff; max-width:540px; margin:60px auto; border-radius:12px; box-shadow:0 4px 24px #0003; padding:32px 28px 24px 28px; position:relative;">
+            <span style="position:absolute; top:12px; right:18px; font-size:1.5em; cursor:pointer; color:#0074d9;" onclick="fecharModalPmf()">&times;</span>
+            <div style="font-size:1.1em; margin-bottom:18px;">
+                <b>Como calcular o polinômio característico desejado (P<sub>mf,desejado</sub>):</b>
+            </div>
+            <div style="font-size:1em;">
+                <b>Estrutura geral do polinômio característico:</b><br>
+                <span style="font-size:1.05em;">
+                \( P_{mf}(s) = D_{planta}(s) \cdot D_{controlador}(s) + N_{planta}(s) \cdot N_{controlador}(s) \)
+                </span>
+                <br>
+                <i>Onde \( D \) e \( N \) são denominador e numerador da planta/controlador, respectivamente.</i>
+                <hr>
+                <b>1ª ordem (exemplo: planta 1ª ordem + P):</b><br>
+                \( P_{mf,desejado}(s) = s + p_d \)<br>
+                onde \( p_d = \frac{3}{T_{s,fechada}} \)<br>
+                <span style="font-size:0.95em;">
+                <i>Estrutura típica: \( s + K_c K_g \), onde \( K_g \) é o ganho estático da planta.</i>
+                </span>
+                <hr>
+                <b>2ª ordem (exemplo: planta 1ª ordem + PI):</b><br>
+                \( P_{mf,desejado}(s) = s^2 + (p_{planta} + p_d)s + p_{planta}p_d \)<br>
+                onde \( p_d = \frac{3}{T_{s,fechada}} \)
+                <hr>
+                <b>3ª ordem (exemplo: planta 2ª ordem + PI):</b><br>
+                \( P_{mf,desejado}(s) = s^3 + (p_1 + p_2 + p_d)s^2 + (p_1p_2 + (p_1 + p_2)p_d)s + p_1p_2p_d \)<br>
+                onde \( p_1, p_2 \) são polos da planta e \( p_d = \frac{3}{T_{s,fechada}} \)
+                <hr>
+                <b>Como usar:</b><br>
+                - Defina os polos da planta e do controlador.<br>
+                - Ajuste o tempo de assentamento desejado.<br>
+                - Compare o polinômio característico atual com o desejado.<br>
+                <div id="poly-fechada-info-modal" style="margin-top:12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- Estado dos parâmetros ---
+    let polos_planta = [-0.0758];
+    let zeros_planta = [];
+    let polos_controlador = [];
+    let zeros_controlador = [];
+    let ganho_controlador = 1.0;
+    let ganho_planta = 1.0;
+
+    function renderParamList(listId, arr, type) {
+        const container = document.getElementById(listId);
+        container.innerHTML = '';
+        arr.forEach((val, idx) => {
+            const row = document.createElement('div');
+            row.className = 'param-row';
+            row.innerHTML = `<input type="number" class="input-inline" value="${val}" step="0.01"
+                onchange="onParamChange('${type}',${idx},this.value)">
+                <button class="remove-btn" onclick="removeParam('${type}',${idx})">x</button>`;
+            container.appendChild(row);
+        });
+    }
+
+    function addParam(type) {
+        if(type === 'planta-polos') polos_planta.push(-1);
+        if(type === 'planta-zeros') zeros_planta.push(0);
+        if(type === 'controlador-polos') polos_controlador.push(-1);
+        if(type === 'controlador-zeros') zeros_controlador.push(0);
+        updateParamLists();
+        updateAll();
+    }
+
+    function removeParam(type, idx) {
+        if(type === 'planta-polos') polos_planta.splice(idx,1);
+        if(type === 'planta-zeros') zeros_planta.splice(idx,1);
+        if(type === 'controlador-polos') polos_controlador.splice(idx,1);
+        if(type === 'controlador-zeros') zeros_controlador.splice(idx,1);
+        updateParamLists();
+        updateAll();
+    }
+
+    function onParamChange(type, idx, value) {
+        value = parseFloat(value);
+        if(type === 'planta-polos') polos_planta[idx] = value;
+        if(type === 'planta-zeros') zeros_planta[idx] = value;
+        if(type === 'controlador-polos') polos_controlador[idx] = value;
+        if(type === 'controlador-zeros') zeros_controlador[idx] = value;
+        updateAll();
+    }
+
+    function updateParamLists() {
+        renderParamList('planta-polos-list', polos_planta, 'planta-polos');
+        renderParamList('planta-zeros-list', zeros_planta, 'planta-zeros');
+        renderParamList('controlador-polos-list', polos_controlador, 'controlador-polos');
+        renderParamList('controlador-zeros-list', zeros_controlador, 'controlador-zeros');
+        document.getElementById('ganho-controlador').value = ganho_controlador;
+        document.getElementById('ganho-planta').value = ganho_planta;
+    }
+
+    document.getElementById('ganho-controlador').addEventListener('change', function() {
+        ganho_controlador = parseFloat(this.value);
+        updateAll();
+    });
+    document.getElementById('ganho-planta').addEventListener('change', function() {
+        ganho_planta = parseFloat(this.value);
+        updateAll();
+    });
+
+    function updateAll() {
+        fetch('/atualizar_pagina4', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                polos_planta: polos_planta,
+                zeros_planta: zeros_planta,
+                polos_controlador: polos_controlador,
+                zeros_controlador: zeros_controlador,
+                ganho_controlador: ganho_controlador,
+                ganho_planta: ganho_planta
+            })
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            // Funções de transferência
+            document.getElementById('latex-planta').innerHTML = data.latex_planta_polinomial || '';
+            document.getElementById('latex-controlador').innerHTML = data.latex_controlador_polinomial || '';
+
+            // Pd
+            document.getElementById('pd-value').innerHTML = data.pd_value !== null && data.pd_value !== undefined
+                ? `\\( ${data.pd_value.toFixed(4)} \\)`
+                : '-';
+
+            // Gráfico de polos e zeros de malha fechada
+            Plotly.newPlot('plot-pz', data.plot_pz_fechada.data, data.plot_pz_fechada.layout, {responsive: true});
+            Plotly.newPlot('plot-open', data.plot_open_data.data, data.plot_open_data.layout, {responsive: true});
+            Plotly.newPlot('plot-closed', data.plot_closed_data.data, data.plot_closed_data.layout, {responsive: true});
+
+            // Tempos de assentamento
+            document.getElementById('ts-aberta').value = (data.ts_aberta ? data.ts_aberta.toFixed(3) : '-') + " s";
+            document.getElementById('ts-fechada').value = (data.ts_fechada ? data.ts_fechada.toFixed(3) : '-') + " s";
+
+            // Polinômio característico atual
+            document.getElementById('poly-caracteristico').innerHTML = data.poly_caracteristico_latex || '';
+
+            // Polinômio desejado (para o modal e para exibição abaixo do Pmf)
+            document.getElementById('poly-fechada-info-modal').innerHTML = data.poly_fechada_latex
+                ? "<b>Polinômio desejado para os parâmetros atuais:</b><br>" + data.poly_fechada_latex
+                : "";
+            document.getElementById('poly-desejado-latex').innerHTML = data.poly_fechada_latex || '';
+
+            if(window.MathJax) MathJax.typesetPromise();
+        });
+    }
+
+    // Modal PMF
+    function abrirModalPmf() {
+        document.getElementById('modal-pmf').style.display = 'block';
+        if(window.MathJax) MathJax.typesetPromise();
+    }
+    function fecharModalPmf() {
+        document.getElementById('modal-pmf').style.display = 'none';
+    }
+
+    // Inicialização
+    updateParamLists();
+    updateAll();
+
+    // Troque o onclick do info-icon para usar o id e adicionar o eventListener
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('pmf-modal-trigger').onclick = abrirModalPmf;
+    });
+    </script>
+</body>
+</html>

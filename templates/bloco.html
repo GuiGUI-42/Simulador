@@ -7,6 +7,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body { background: #f3f3f7; font-family: sans-serif; margin: 0; }
         .blocos-container {
@@ -102,6 +103,44 @@
             };
         }
 
+        // Soma de duas FTs: (n1/d1) + (n2/d2) = (n1*d2 + n2*d1)/(d1*d2)
+        function sumTFs(tfList) {
+            if (tfList.length === 0) return { num: [0], den: [1] };
+            let acc = tfList[0];
+            for (let i = 1; i < tfList.length; ++i) {
+                const a = acc, b = tfList[i];
+                const num = polyAdd(
+                    polyMul(a.num, b.den),
+                    polyMul(b.num, a.den)
+                );
+                const den = polyMul(a.den, b.den);
+                acc = { num, den };
+            }
+            return acc;
+        }
+
+        // Multiplicação de polinômios
+        function polyMul(a, b) {
+            const res = Array(a.length + b.length - 1).fill(0);
+            for (let i = 0; i < a.length; ++i)
+                for (let j = 0; j < b.length; ++j)
+                    res[i + j] += a[i] * b[j];
+            return res;
+        }
+        // Soma de polinômios
+        function polyAdd(a, b) {
+            const n = Math.max(a.length, b.length);
+            const res = [];
+            for (let i = 0; i < n; ++i) {
+                const ai = a[a.length - n + i] || 0;
+                const bi = b[b.length - n + i] || 0;
+                res.push(ai + bi);
+            }
+            // Remove zeros à esquerda
+            while (res.length > 1 && Math.abs(res[0]) < 1e-12) res.shift();
+            return res;
+        }
+
         function Bloco({ bloco, onClick, onDragStart, dragging, onInputDotDown, onOutputDotDown, isInputActive, isOutputActive }) {
             return (
                 <div
@@ -111,8 +150,12 @@
                         top: bloco.y,
                         zIndex: dragging ? 10 : 1,
                     }}
-                    onMouseDown={e => onDragStart(e, bloco.id)}
-                    onClick={e => { if (!dragging) onClick(); }}
+                    onMouseDown={e => {
+                        // Só inicia drag se não for no título
+                        if (!e.target.classList.contains("bloco-title")) {
+                            onDragStart(e, bloco.id);
+                        }
+                    }}
                 >
                     <div
                         className={"io-dot input" + (isInputActive ? " active" : "")}
@@ -124,9 +167,18 @@
                         title="Saída"
                         onMouseDown={e => { e.stopPropagation(); onOutputDotDown(bloco.id, e); }}
                     />
-                    <div style={{fontWeight:"bold", marginBottom:8}}>Bloco #{bloco.id}</div>
+                    <div
+                        className="bloco-title"
+                        style={{fontWeight:"bold", marginBottom:8, cursor:"pointer"}}
+                        onClick={e => { e.stopPropagation(); onClick(); }}
+                    >
+                        Bloco #{bloco.id}
+                    </div>
                     <div style={{fontFamily:"monospace", marginTop:8}}>
-                        G(s) = <span style={{fontFamily:"serif"}}>{`(${latexPoly(bloco.num)}) / (${latexPoly(bloco.den)})`}</span>
+                        {bloco.tipo === "constante"
+                            ? <span style={{fontFamily:"serif"}}>Constante: <b>{bloco.valor ?? 1}</b></span>
+                            : <>G(s) = <span style={{fontFamily:"serif"}}>{`(${latexPoly(bloco.num)}) / (${latexPoly(bloco.den)})`}</span></>
+                        }
                     </div>
                 </div>
             );
@@ -174,7 +226,67 @@
             );
         }
 
-        function SaidaBloco({ pos, onInputDotDown, isInputActive }) {
+        function SaidaGraphModal({ open, onClose, tf, saidaPos }) {
+            const plotId = "saida-plotly-graph";
+            const [plotData, setPlotData] = React.useState(null);
+
+            React.useEffect(() => {
+                if (!open || !tf) return;
+                setPlotData(null); // Limpa antes de buscar
+                fetch("/simular_saida", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        num: tf.num,
+                        den: tf.den,
+                        t_final: 40,
+                        n_points: 200
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.t && data.y) {
+                        setPlotData({ t: data.t, y: data.y });
+                    }
+                });
+            }, [open, tf]);
+
+            React.useEffect(() => {
+                if (!open || !plotData) return;
+                Plotly.newPlot(plotId, [{
+                    x: plotData.t,
+                    y: plotData.y,
+                    mode: "lines",
+                    name: "Saída"
+                }], {
+                    title: "Resposta ao Degrau da Saída",
+                    xaxis: { title: "Tempo (s)" },
+                    yaxis: { title: "Saída" }
+                }, {displayModeBar: false});
+            }, [open, plotData]);
+
+            if (!open) return null;
+            return (
+                <div style={{
+                    position: "fixed", top:0, left:0, width:"100vw", height:"100vh",
+                    background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", zIndex: 4000
+                }} onClick={onClose}>
+                    <div style={{
+                        background: "#fff", borderRadius: 10, padding: 18, minWidth: 420,
+                        boxShadow: "0 4px 24px #0003", position: "relative"
+                    }} onClick={e => e.stopPropagation()}>
+                        <span style={{
+                            position: "absolute", top: 8, right: 12, fontSize: "1.5em", cursor: "pointer", color: "#888"
+                        }} onClick={onClose}>&times;</span>
+                        <div style={{fontWeight:"bold", marginBottom:8, color:"#ff9800"}}>Saída do Processo</div>
+                        <div id={plotId} style={{width: 420, height: 280}}></div>
+                        {!plotData && <div style={{textAlign:"center", color:"#888"}}>Calculando resposta...</div>}
+                    </div>
+                </div>
+            );
+        }
+
+        function SaidaBloco({ pos, onInputDotDown, isInputActive, onSaidaClick }) {
             return (
                 <div style={{
                     background: "#fffbe6",
@@ -193,9 +305,12 @@
                     fontSize: "1.2em",
                     color: "#ff9800",
                     zIndex: 5,
-                    cursor: "default",
+                    cursor: "pointer",
                     userSelect: "none"
-                }}>
+                }}
+                onClick={onSaidaClick}
+                title="Clique para ver o gráfico da saída"
+                >
                     <div
                         className={"io-dot input" + (isInputActive ? " active" : "")}
                         title="Entrada"
@@ -264,18 +379,42 @@
             const [linkingFromId, setLinkingFromId] = React.useState(null);
             const [inspectArc, setInspectArc] = React.useState(null);
             const [modalBloco, setModalBloco] = React.useState(null);
+            const [saidaModalOpen, setSaidaModalOpen] = React.useState(false);
+            const [deleteMode, setDeleteMode] = React.useState(false);
+            const [showAddMenu, setShowAddMenu] = React.useState(false);
 
-            function addBloco() {
+            // Funções de deletar bloco e link (precisam estar dentro do App)
+            function deleteBloco(id) {
+                setBlocos(blocos => blocos.filter(b => b.id !== id));
+                setLinks(links => links.filter(l => l.from !== id && l.to !== id));
+            }
+            function deleteLink(idx) {
+                setLinks(links => links.filter((_, i) => i !== idx));
+            }
+
+            function addBloco(tipo = "ft") {
                 setBlocos(blocos => [
                     ...blocos,
-                    {
-                        id: blocos.length ? Math.max(...blocos.map(b => b.id)) + 1 : 1,
-                        num: [1],
-                        den: [1, 1],
-                        x: 100 + 40 * blocos.length,
-                        y: 100 + 40 * blocos.length
-                    }
+                    tipo === "constante"
+                        ? {
+                            id: blocos.length ? Math.max(...blocos.map(b => b.id)) + 1 : 1,
+                            num: [1],
+                            den: [1],
+                            x: 100 + 40 * blocos.length,
+                            y: 100 + 40 * blocos.length,
+                            tipo: "constante",
+                            valor: 1
+                        }
+                        : {
+                            id: blocos.length ? Math.max(...blocos.map(b => b.id)) + 1 : 1,
+                            num: [1],
+                            den: [1, 1],
+                            x: 100 + 40 * blocos.length,
+                            y: 100 + 40 * blocos.length,
+                            tipo: "ft"
+                        }
                 ]);
+                setShowAddMenu(false);
             }
 
             function onDragStart(e, id) {
@@ -339,34 +478,53 @@
                 setLinkingFromId(null);
             }
 
+            // Novo: lógica de FT acumulada considerando paralelos
             function getAccumulatedTFTo(blocoId) {
-                let path = [];
-                let curr = blocoId;
-                while (true) {
-                    path.unshift(curr);
-                    const prev = links.find(l => l.to === curr);
-                    if (!prev) break;
-                    curr = prev.from;
+                // Se for a saída, retorna a soma das FTs de todos os blocos ligados à saída
+                if (blocoId === "saida") {
+                    const entradas = links.filter(l => l.to === "saida").map(l => l.from);
+                    const entradasTF = entradas.map(getAccumulatedTFTo);
+                    return sumTFs(entradasTF);
                 }
-                let num = [1], den = [1];
-                path.forEach(id => {
-                    const b = blocos.find(b => b.id === id);
-                    if (b) {
-                        const res = multiplyTF(num, den, b.num, b.den);
-                        num = res.num;
-                        den = res.den;
+
+                // Descubra todos os links que chegam neste bloco
+                const entradas = links.filter(l => l.to === blocoId).map(l => l.from);
+
+                if (entradas.length === 0) {
+                    // Não tem entradas, retorna FT do bloco (ou 1 para a entrada do sistema)
+                    const bloco = blocos.find(b => b.id === blocoId);
+                    if (bloco) return { num: bloco.num, den: bloco.den };
+                    return { num: [1], den: [1] };
+                }
+                if (entradas.length === 1) {
+                    // Série: multiplica FT acumulada da entrada pela FT do bloco
+                    const entradaTF = getAccumulatedTFTo(entradas[0]);
+                    const bloco = blocos.find(b => b.id === blocoId);
+                    if (bloco) {
+                        return multiplyTF(entradaTF.num, entradaTF.den, bloco.num, bloco.den);
                     }
-                });
-                return { num, den, path };
+                    return entradaTF;
+                }
+                // Paralelo: soma as FTs acumuladas de todas as entradas, depois multiplica pela FT do bloco
+                const entradasTF = entradas.map(getAccumulatedTFTo);
+                const soma = sumTFs(entradasTF);
+                const bloco = blocos.find(b => b.id === blocoId);
+                if (bloco) {
+                    return multiplyTF(soma.num, soma.den, bloco.num, bloco.den);
+                }
+                return soma;
             }
 
-            // Calcula a FT total até a saída
+            // Calcula a FT total até a saída (usando a nova lógica)
             function getSaidaTF() {
-                const saidaLink = links.find(l => l.to === "saida");
-                if (!saidaLink) return null;
-                return getAccumulatedTFTo(saidaLink.from);
+                // Se não houver ligação para a saída, retorna null
+                const saidaLinks = links.filter(l => l.to === "saida");
+                if (!saidaLinks.length) return null;
+                // Soma as FTs de todos os caminhos que chegam à saída
+                return getAccumulatedTFTo("saida");
             }
 
+            // Corrija o escopo do renderLinks para acessar deleteMode, deleteLink, setDeleteMode
             function renderLinks() {
                 return (
                     <svg
@@ -397,18 +555,22 @@
                                 resultTF = multiplyTF(accumulatedTF.num, accumulatedTF.den, toBloco.num, toBloco.den);
                             }
 
-                            // Clique no arco para inspecionar
+                            // Clique no arco para inspecionar ou deletar
                             const handleArcClick = e => {
                                 e.stopPropagation();
-                                if (link.to === "saida") return;
-                                setInspectArc({
-                                    from: fromBloco,
-                                    to: toBloco,
-                                    resultTF: resultTF,
-                                    x: mx + 30,
-                                    y: my - 30,
-                                    accumulatedTF: accumulatedTF
-                                });
+                                if (deleteMode) {
+                                    deleteLink(i);
+                                    setDeleteMode(false);
+                                } else if (link.to !== "saida") {
+                                    setInspectArc({
+                                        from: fromBloco,
+                                        to: toBloco,
+                                        resultTF: resultTF,
+                                        x: mx + 30,
+                                        y: my - 30,
+                                        accumulatedTF: accumulatedTF
+                                    });
+                                }
                             };
 
                             return (
@@ -438,8 +600,45 @@
                 setBlocos(blocos => blocos.map(b => b.id === updated.id ? updated : b));
             }
 
+            // FT total para passar ao modal (fora do JSX para garantir memoização)
+            const saidaTF = getSaidaTF();
+            // Gera uma chave única para o modal baseada na FT total
+            const saidaTFKey = saidaTF ? JSON.stringify({num: saidaTF.num, den: saidaTF.den}) : "none";
+
             return (
                 <div>
+                    {/* Ícone de deletar no canto superior direito */}
+                    <div
+                        style={{
+                            position: "fixed",
+                            top: 24,
+                            right: 48,
+                            zIndex: 100,
+                            cursor: "pointer",
+                            background: deleteMode ? "#ffebee" : "#fff",
+                            border: "2px solid #ff1744",
+                            borderRadius: "50%",
+                            width: 44,
+                            height: 44,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: deleteMode ? "0 0 8px #ff1744" : "0 2px 8px #0001",
+                            transition: "background 0.2s"
+                        }}
+                        title={deleteMode ? "Clique para sair do modo deletar" : "Modo deletar: clique para ativar"}
+                        onClick={e => {
+                            e.stopPropagation();
+                            setDeleteMode(mode => !mode);
+                        }}
+                    >
+                        {/* SVG de lixeira */}
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff1744" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="6" width="18" height="14" rx="2" />
+                            <path d="M9 10v6M15 10v6" />
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                    </div>
                     <div
                         className="blocos-container"
                         style={{ width: containerWidth, height: containerHeight }}
@@ -449,7 +648,14 @@
                             <Bloco
                                 key={bloco.id}
                                 bloco={bloco}
-                                onClick={()=>setModalBloco(bloco)}
+                                onClick={() => {
+                                    if (deleteMode) {
+                                        deleteBloco(bloco.id);
+                                        setDeleteMode(false);
+                                    } else {
+                                        setModalBloco(bloco);
+                                    }
+                                }}
                                 onDragStart={onDragStart}
                                 onInputDotDown={onInputDotDown}
                                 onOutputDotDown={onOutputDotDown}
@@ -458,39 +664,110 @@
                                 dragging={draggingId === bloco.id}
                             />
                         )}
+                        {/* FT da saída acima do bloco de saída */}
+                        {saidaTF &&
+                            <div style={{
+                                position: "absolute",
+                                left: saidaPos.x + 35 - 130,
+                                top: saidaPos.y - 60,
+                                width: 260,
+                                color: "#ff9800",
+                                fontSize: "1.1em",
+                                fontFamily: "serif",
+                                background: "#fffbe6",
+                                borderRadius: 8,
+                                padding: "8px 12px",
+                                boxShadow: "0 2px 8px #0001",
+                                zIndex: 6,
+                                wordBreak: "break-word",
+                                textAlign: "center"
+                            }}>
+                                <b>Resultado em série:</b><br />
+                                <span style={{fontFamily:"serif"}}>
+                                    G<sub>total</sub>(s) = <span>
+                                        (<span>{latexPoly(saidaTF.num)}</span>) / (<span>{latexPoly(saidaTF.den)}</span>)
+                                    </span>
+                                </span>
+                            </div>
+                        }
                         <SaidaBloco
                             pos={saidaPos}
                             onInputDotDown={onInputDotDown}
                             isInputActive={!!linkingFromId}
+                            onSaidaClick={() => setSaidaModalOpen(true)}
                         />
-                        <button className="add-bloco-btn" title="Adicionar bloco" onClick={addBloco}>+</button>
-                    </div>
-                    {/* Exibe resultado da saída abaixo do bloco de saída */}
-                    {(() => {
-                        const tf = getSaidaTF();
-                        if (tf)
-                            return (
+                        {/* Botão de adicionar bloco no canto inferior esquerdo */}
+                        <div
+                            style={{
+                                position: "absolute",
+                                left: 80, // aumente este valor para mover mais para dentro
+                                bottom: 40, // aumente este valor para subir um pouco
+                                zIndex: 20
+                            }}
+                        >
+                            <div
+                                className="add-bloco-btn"
+                                title="Adicionar bloco"
+                                style={{
+                                    width: 56,
+                                    height: 56,
+                                    fontSize: "2.2em",
+                                    background: showAddMenu ? "#1976d2" : "#2196f3",
+                                    border: showAddMenu ? "2px solid #1976d2" : "none",
+                                    transition: "background 0.2s"
+                                }}
+                                onClick={() => setShowAddMenu(show => !show)}
+                            >
+                                {/* Ícone de "+" animado/interativo */}
+                                <svg width="32" height="32" viewBox="0 0 32 32" style={{transition:"transform 0.2s", transform: showAddMenu ? "rotate(45deg)" : "none"}}>
+                                    <circle cx="16" cy="16" r="15" fill="none"/>
+                                    <rect x="14" y="7" width="4" height="18" rx="2" fill="#fff"/>
+                                    <rect x="7" y="14" width="18" height="4" rx="2" fill="#fff"/>
+                                </svg>
+                            </div>
+                            {/* Menu de tipos de bloco */}
+                            {showAddMenu &&
                                 <div style={{
-                                    position: "absolute",
-                                    left: saidaPos.x + 80,
-                                    top: saidaPos.y + 70,
-                                    width: 260,
-                                    color: "#ff9800",
-                                    fontSize: "1.1em",
-                                    fontFamily: "serif",
-                                    background: "#fffbe6",
+                                    marginTop: 8,
+                                    background: "#fff",
+                                    border: "1.5px solid #2196f3",
                                     borderRadius: 8,
-                                    padding: "8px 12px",
-                                    boxShadow: "0 2px 8px #0001",
-                                    zIndex: 6,
-                                    wordBreak: "break-word"
+                                    boxShadow: "0 2px 12px #0002",
+                                    minWidth: 180,
+                                    padding: "8px 0",
+                                    position: "absolute",
+                                    left: 0,
+                                    bottom: 64,
+                                    zIndex: 30
                                 }}>
-                                    <b>Resultado em série:</b><br />
-                                    <span>{`G_{total}(s) = (${latexPoly(tf.num)}) / (${latexPoly(tf.den)})`}</span>
+                                    <div
+                                        style={{
+                                            padding: "10px 18px",
+                                            cursor: "pointer",
+                                            color: "#1976d2",
+                                            fontWeight: "bold",
+                                            fontFamily: "sans-serif"
+                                        }}
+                                        onClick={() => addBloco("ft")}
+                                    >
+                                        Função de Transferência
+                                    </div>
+                                    <div
+                                        style={{
+                                            padding: "10px 18px",
+                                            cursor: "pointer",
+                                            color: "#388e3c",
+                                            fontWeight: "bold",
+                                            fontFamily: "sans-serif"
+                                        }}
+                                        onClick={() => addBloco("constante")}
+                                    >
+                                        Bloco de Constante
+                                    </div>
                                 </div>
-                            );
-                        return null;
-                    })()}
+                            }
+                        </div>
+                    </div>
                     {inspectArc &&
                         <ArcInspectModal
                             left={inspectArc.x}
@@ -509,6 +786,14 @@
                             onSave={updateBloco}
                         />
                     }
+                    {/* Modal do gráfico da saída */}
+                    <SaidaGraphModal
+                        key={saidaModalOpen ? saidaTFKey : "closed"}
+                        open={saidaModalOpen}
+                        onClose={() => setSaidaModalOpen(false)}
+                        tf={saidaTF}
+                        saidaPos={saidaPos}
+                    />
                 </div>
             );
         }
