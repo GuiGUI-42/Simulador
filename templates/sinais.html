@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Sinais e Sistemas - Resposta do Sistema</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f6f8fa; margin: 0; padding: 0; }
+        .container { max-width: 800px; margin: 30px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #ccc; padding: 30px; }
+        h2 { color: #0074d9; }
+        label { font-weight: bold; }
+        input[type="text"] { width: 90%; padding: 6px; margin: 6px 0 12px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #0074d9; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #005fa3; }
+        .result-box { background: #f0f7ff; border-radius: 6px; padding: 16px; margin-top: 18px; }
+        .flex { display: flex; gap: 30px; flex-wrap: wrap; }
+        .flex > div { flex: 1 1 200px; }
+        .math { font-size: 1.2em; margin-bottom: 10px; }
+        .list { margin: 0; padding-left: 18px; }
+        #erro { display:none; color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Sinais e Sistemas - Resposta do Sistema</h2>
+    <div class="result-box" style="background:#eaf7ea;">
+        <b>Como calcular a resposta de um sistema?</b>
+        <ul>
+            <li><b>No tempo (EDO):</b> Resolva a equação diferencial do sistema com a entrada desejada (ex: degrau). Exemplo:<br>
+                <span class="math">\( a_2 \frac{d^2y}{dt^2} + a_1 \frac{dy}{dt} + a_0 y = b_0 u(t) \)</span>
+            </li>
+            <li><b>No tempo (FT):</b> Use a função de transferência e calcule a resposta ao degrau via convolução ou diretamente:<br>
+                <span class="math">\( y(t) = \mathcal{L}^{-1}\{ G(s) \cdot U(s) \} \)</span>
+            </li>
+            <li><b>Na frequência:</b> Use o diagrama de Bode para ver como o sistema responde a diferentes frequências.</li>
+        </ul>
+        <i>Escolha abaixo como deseja calcular a resposta do sistema!</i>
+    </div>
+    <form id="sinais-form">
+        <label for="num">Coeficientes do Numerador (ex: 1 0):</label><br>
+        <input type="text" id="num" value="1"><br>
+        <label for="den">Coeficientes do Denominador (ex: 1 2 1):</label><br>
+        <input type="text" id="den" value="1 2 1"><br>
+        <div style="margin:10px 0;">
+            <label><input type="radio" name="metodo" value="ft" checked> Usar Função de Transferência</label>
+            <label style="margin-left:20px;"><input type="radio" name="metodo" value="edo"> Usar Equação Diferencial</label>
+        </div>
+        <button type="submit">Calcular Resposta</button>
+        <button type="button" id="btn-bode" style="margin-left:10px;">Mostrar Resposta em Frequência</button>
+    </form>
+    <div id="edo-box" class="result-box" style="display:none; background:#fffbe6;">
+        <b>Digite a EDO do sistema:</b><br>
+        <span style="font-size:0.95em;">Exemplo: <code>y'' + 2y' + y = u(t)</code></span>
+        <input type="text" id="edo-input" style="width:90%; margin-top:6px;" placeholder="Ex: y'' + 2y' + y = u(t)">
+        <button type="button" id="btn-edo" style="margin-top:6px;">Calcular Resposta (EDO)</button>
+        <div id="edo-latex" class="math"></div>
+        <div id="edo-step" style="height:300px;"></div>
+    </div>
+    <div id="resultados" style="display:none;">
+        <div class="result-box">
+            <div class="math" id="latex_ft"></div>
+            <div class="flex">
+                <div>
+                    <b>Polos:</b>
+                    <ul class="list" id="polos"></ul>
+                    <b>Módulo dos Polos:</b>
+                    <ul class="list" id="mod_polos"></ul>
+                </div>
+                <div>
+                    <b>Zeros:</b>
+                    <ul class="list" id="zeros"></ul>
+                    <b>Módulo dos Zeros:</b>
+                    <ul class="list" id="mod_zeros"></ul>
+                </div>
+            </div>
+        </div>
+        <div class="result-box">
+            <div id="grafico_step" style="height:350px;"></div>
+        </div>
+        <div class="result-box" id="bode-box" style="display:none;">
+            <div id="grafico_bode" style="height:350px;"></div>
+        </div>
+    </div>
+    <div id="erro" style="display:none; color: red; margin-top: 10px;"></div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('sinais-form');
+    const erroDiv = document.getElementById('erro');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        erroDiv.style.display = 'none';
+        let num = document.getElementById('num').value.trim().split(/\s+/).map(Number);
+        let den = document.getElementById('den').value.trim().split(/\s+/).map(Number);
+
+        // Validação simples
+        if (num.length === 0 || den.length === 0 || den.every(x => x === 0) || num.some(isNaN) || den.some(isNaN)) {
+            erroDiv.textContent = "Por favor, insira coeficientes válidos para numerador e denominador.";
+            erroDiv.style.display = 'block';
+            document.getElementById('resultados').style.display = 'none';
+            return;
+        }
+
+        fetch('/sinais_backend', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({num: num, den: den})
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.error) {
+                erroDiv.textContent = "Erro no cálculo: " + data.error;
+                erroDiv.style.display = 'block';
+                document.getElementById('resultados').style.display = 'none';
+                return;
+            }
+            document.getElementById('resultados').style.display = 'block';
+            document.getElementById('latex_ft').innerHTML = data.latex_ft;
+
+            // Polos e módulos
+            let polos = data.polos.map(p => typeof p === "number" ? p.toFixed(3) : (typeof p === "string" ? p : (p[0].toFixed(3) + (p[1]>=0?" + ":" - ") + Math.abs(p[1]).toFixed(3) + "j")));
+            let mod_polos = data.mod_polos.map(m => m.toFixed(3));
+            let zeros = data.zeros.map(z => typeof z === "number" ? z.toFixed(3) : (typeof z === "string" ? z : (z[0].toFixed(3) + (z[1]>=0?" + ":" - ") + Math.abs(z[1]).toFixed(3) + "j")));
+            let mod_zeros = data.mod_zeros.map(m => m.toFixed(3));
+
+            document.getElementById('polos').innerHTML = polos.map(p => `<li>${p}</li>`).join('');
+            document.getElementById('mod_polos').innerHTML = mod_polos.map(m => `<li>${m}</li>`).join('');
+            document.getElementById('zeros').innerHTML = zeros.map(z => `<li>${z}</li>`).join('');
+            document.getElementById('mod_zeros').innerHTML = mod_zeros.map(m => `<li>${m}</li>`).join('');
+
+            // Gráfico
+            Plotly.newPlot('grafico_step', [{
+                x: data.step_response.T,
+                y: data.step_response.y,
+                mode: 'lines',
+                name: 'Resposta ao Degrau',
+                line: {color: '#0074d9'}
+            }], {
+                title: 'Resposta ao Degrau',
+                xaxis: {title: 'Tempo (s)'},
+                yaxis: {title: 'Saída y(t)'},
+                margin: {t: 40, l: 50, r: 20, b: 50}
+            });
+
+            if (window.MathJax) MathJax.typesetPromise();
+        })
+        .catch(err => {
+            erroDiv.textContent = "Erro de comunicação com o servidor.";
+            erroDiv.style.display = 'block';
+            document.getElementById('resultados').style.display = 'none';
+        });
+    });
+
+    // Novo botão para resposta em frequência (Bode)
+    document.getElementById('btn-bode').addEventListener('click', function() {
+        const erroDiv = document.getElementById('erro');
+        erroDiv.style.display = 'none';
+        let num = document.getElementById('num').value.trim().split(/\s+/).map(Number);
+        let den = document.getElementById('den').value.trim().split(/\s+/).map(Number);
+
+        if (num.length === 0 || den.length === 0 || den.every(x => x === 0) || num.some(isNaN) || den.some(isNaN)) {
+            erroDiv.textContent = "Por favor, insira coeficientes válidos para numerador e denominador.";
+            erroDiv.style.display = 'block';
+            document.getElementById('bode-box').style.display = 'none';
+            return;
+        }
+
+        fetch('/sinais_backend', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({num: num, den: den, bode: true})
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (!data.bode_data) {
+                erroDiv.textContent = "Não foi possível calcular a resposta em frequência.";
+                erroDiv.style.display = 'block';
+                document.getElementById('bode-box').style.display = 'none';
+                return;
+            }
+            document.getElementById('bode-box').style.display = 'block';
+            Plotly.newPlot('grafico_bode', data.bode_data.data, data.bode_data.layout);
+        })
+        .catch(err => {
+            erroDiv.textContent = "Erro de comunicação com o servidor.";
+            erroDiv.style.display = 'block';
+            document.getElementById('bode-box').style.display = 'none';
+        });
+    });
+
+    // Mostrar/ocultar box EDO conforme escolha
+    document.querySelectorAll('input[name="metodo"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('edo-box').style.display = this.value === 'edo' ? 'block' : 'none';
+        });
+    });
+
+    // EDO: Envia EDO para backend e plota resposta
+    document.getElementById('btn-edo').onclick = function() {
+        const eq = document.getElementById('edo-input').value.trim();
+        if (!eq) return;
+        fetch('/sinais_edo', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({edo: eq})
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            document.getElementById('edo-latex').innerHTML = data.latex || '';
+            Plotly.newPlot('edo-step', [{
+                x: data.t, y: data.y, mode: 'lines', name: 'Resposta ao Degrau', line: {color: '#2ca02c'}
+            }], {title: 'Resposta ao Degrau (EDO)', xaxis: {title: 'Tempo (s)'}, yaxis: {title: 'y(t)'}});
+            if (window.MathJax) MathJax.typesetPromise();
+        });
+    };
+});
+</script>
+</body>
+</html>

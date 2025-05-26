@@ -45,18 +45,43 @@
 </head>
 <body>
     <!-- Menu de hambúrguer -->
-    <div class="menu">
-        <div class="menu-icon"></div>
-        <div class="menu-icon"></div>
-        <div class="menu-icon"></div>
+    <div class="menu" style="position:fixed; top:8px; left:8px; z-index:1000;">
+        <div style="display:flex; flex-direction:column; margin-right:8px;">
+            <div class="menu-icon"></div>
+            <div class="menu-icon"></div>
+            <div class="menu-icon"></div>
+        </div>
         <div class="menu-content">
             <label>
                 <input id="dark-mode-toggle" type="checkbox">
                 Ativar Modo Escuro
             </label>
-            <a href="/pagina4" class="menu-link">Simulador Completo</a>
+            <div style="margin-top:10px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Modelagem</div>
+            <a href="/state" class="menu-link" style="margin-top:0;">Espaço de Estados (Sistema Mecânico)</a>
+            <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Sinais e Sistemas</div>
+            <a href="/estabilidade" class="menu-link" style="margin-top:0;">Estabilidade</a>
+            <a href="/sinais" class="menu-link" style="margin-top:0;">Resposta do Sistema</a>
+            <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Controle</div>
+            <a href="/alocacao" class="menu-link" style="margin-top:0;">Alocação de Polos</a>
+            <a href="/raizes" class="menu-link" style="margin-top:0;">Lugar das Raízes</a>
+            <a href="/pagina2" class="menu-link" style="margin-top:0;">Malha Aberta</a>
+            <a href="/blocos" class="menu-link" style="margin-top:0;">Diagrama de Blocos</a>
+            <a href="/pagina4" class="menu-link" style="margin-top:0;">Simulador Completo</a>
+            <a href="/pid" class="menu-link" style="margin-top:0;">Avançado (PID)</a>
+            <a href="/discreto" class="menu-link" style="margin-top:0;">Discreto</a>
+            <a href="/principal" class="menu-link" style="margin-top:16px;">Página Inicial</a>
             <button id="abrir-feedback" style="margin-top:10px;">Enviar Feedback</button>
         </div>
+    </div>
+
+    <!-- Espaço para não sobrepor o conteúdo -->
+    <div style="height:56px;"></div>
+
+    <!-- Mini separação de módulo -->
+    <div style="margin: 18px 0 0 0; text-align:center;">
+        <span style="display:inline-block; background:#e3e3e9; color:#1976d2; font-weight:bold; border-radius:8px; padding:4px 18px; font-size:1.08em; letter-spacing:0.5px;">
+            Módulo: Malha Aberta
+        </span>
     </div>
 
     <div class="left-section">
@@ -197,21 +222,23 @@
         atualizar();
     };
 
-    // Menu e modo escuro (igual página 4)
-    const menu = document.querySelector('.menu');
-    const menuContent = document.querySelector('.menu-content');
-    menu.addEventListener('mouseenter', () => {
-        menuContent.classList.add('show');
-        menu.classList.add('open');
-    });
-    menu.addEventListener('mouseleave', () => {
-        menuContent.classList.remove('show');
-        menu.classList.remove('open');
-    });
-
-    document.getElementById('dark-mode-toggle').addEventListener('change', (event) => {
-        document.body.classList.toggle('dark-mode', event.target.checked);
-        atualizar(); // Redesenha os gráficos com o layout correto
+    // Menu hamburguer interativo (igual outras páginas)
+    document.addEventListener('DOMContentLoaded', function() {
+        const menu = document.querySelector('.menu');
+        const menuContent = document.querySelector('.menu-content');
+        menu.addEventListener('mouseenter', () => {
+            menuContent.classList.add('show');
+            menu.classList.add('open');
+        });
+        menu.addEventListener('mouseleave', () => {
+            menuContent.classList.remove('show');
+            menu.classList.remove('open');
+        });
+        document.getElementById('dark-mode-toggle').addEventListener('change', (event) => {
+            document.body.classList.toggle('dark-mode', event.target.checked);
+            atualizar();
+        });
+        // Feedback modal já está implementado abaixo
     });
 
     // Feedback modal

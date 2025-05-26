@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Projeto por Lugar das Raízes</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+        }
+        .main-flex {
+            display: flex; flex-direction: row; gap: 32px; align-items: flex-start; width: 100%;
+        }
+        .side-col {
+            flex: 1 1 350px; min-width: 340px; max-width: 420px;
+            background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #0001;
+            padding: 24px 24px 16px 24px;
+        }
+        .center-col {
+            flex: 2 1 700px; min-width: 500px; max-width: 900px;
+            background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #0001;
+            padding: 24px 24px 16px 24px;
+        }
+        .box { border: 1px solid #ccc; border-radius: 8px; padding: 16px; margin: 16px 0; background: #f9f9f9; }
+        .highlight { background: #e6f7ff; padding: 8px; border-radius: 4px; }
+        .latex { font-size: 1.2em; margin: 8px 0; }
+        .input-inline { width: 80px; font-size: 1em; padding: 2px 4px; margin: 2px 4px; }
+        .param-list { margin-bottom: 8px; }
+        .param-list label { font-weight: bold; }
+        .param-row { margin-bottom: 4px; }
+        .remove-btn { color: #fff; background: #d9534f; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
+        .add-btn { color: #fff; background: #5cb85c; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
+        .info-icon {
+            display: inline-block; width: 18px; height: 18px; background: #0074d9; color: #fff;
+            border-radius: 50%; text-align: center; font-weight: bold; cursor: pointer; margin-left: 6px;
+            font-size: 14px; line-height: 18px; position: relative;
+        }
+        .info-tooltip {
+            display: none; position: absolute; background: #fff; color: #333;
+            border: 1px solid #0074d9; border-radius: 6px; padding: 8px; z-index: 10; width: 320px;
+            left: 25px; top: -10px; font-size: 0.95em;
+        }
+        .info-icon:hover .info-tooltip { display: block; }
+        .row-flex { display: flex; align-items: center; gap: 10px; }
+        .section-title { font-size: 1.2em; font-weight: bold; margin-bottom: 12px; }
+        @media (max-width: 1100px) {
+            .main-flex { flex-direction: column; }
+            .center-col, .side-col { max-width: 100%; min-width: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h2 style="margin-left:32px; margin-top:24px;">
+        Projeto por Lugar das Raízes
+        <span class="info-icon">i
+            <span class="info-tooltip">
+                Explore o método do Lugar das Raízes: ajuste polos, zeros e ganho do sistema e veja em tempo real o lugar das raízes, a evolução dos polos e a resposta ao degrau.<br>
+                Experimente diferentes configurações e observe como o ganho afeta a estabilidade e o desempenho do sistema.
+            </span>
+        </span>
+    </h2>
+    <div class="main-flex">
+        <div class="side-col">
+            <div class="section-title">Parâmetros do Sistema</div>
+            <div class="param-list">
+                <label>Polos da Planta:</label>
+                <span class="info-icon">i
+                    <span class="info-tooltip">
+                        Polos determinam a estabilidade e a velocidade de resposta da planta.
+                    </span>
+                </span>
+                <div id="planta-polos-list"></div>
+                <button class="add-btn" onclick="addParam('planta-polos')">Adicionar Polo</button>
+            </div>
+            <div class="param-list">
+                <label>Zeros da Planta:</label>
+                <span class="info-icon">i
+                    <span class="info-tooltip">
+                        Zeros podem modificar a forma da resposta transitória.
+                    </span>
+                </span>
+                <div id="planta-zeros-list"></div>
+                <button class="add-btn" onclick="addParam('planta-zeros')">Adicionar Zero</button>
+            </div>
+            <div class="param-list">
+                <label>Ganho (K):</label>
+                <input type="number" id="ganho" class="input-inline" value="1.0" step="0.01" min="0" onchange="updateAll()">
+            </div>
+            <div style="margin: 24px 0 24px 0;">
+                <span class="latex" id="latex-planta"></span>
+            </div>
+            <div class="box highlight" style="margin-bottom: 18px;">
+                <div class="row-flex">
+                    <label>Selecione o ganho para destacar os polos:</label>
+                    <input type="range" id="ganho-slider" min="0.01" max="20" step="0.01" value="1.0" style="width: 140px;" oninput="onSliderChange(this.value)">
+                    <span id="ganho-slider-value" style="width:60px; display:inline-block;">1.00</span>
+                </div>
+                <div style="font-size:0.98em; margin-top:8px;">
+                    Arraste o controle deslizante para ver como os polos de malha fechada se movem ao longo do lugar das raízes.
+                </div>
+            </div>
+        </div>
+        <div class="center-col">
+            <div style="margin-bottom: 32px;">
+                <label style="font-weight:bold;">Lugar das Raízes:</label>
+                <div id="plot-lgr" style="margin-top:16px; width:100%; min-height:420px; height:420px; max-height:520px;"></div>
+            </div>
+            <div class="box" style="margin-bottom: 32px;">
+                <label>Resposta ao Degrau (Malha Fechada):</label>
+                <div id="plot-step" style="width:100%; min-height:320px; height:320px;"></div>
+            </div>
+            <div class="box">
+                <label>Função de Transferência:</label>
+                <div class="latex" id="latex-ft"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+    // --- Estado dos parâmetros ---
+    let polos_planta = [-1, -2];
+    let zeros_planta = [];
+    let ganho = 1.0;
+
+    function renderParamList(listId, arr, type) {
+        const container = document.getElementById(listId);
+        container.innerHTML = '';
+        arr.forEach((val, idx) => {
+            const row = document.createElement('div');
+            row.className = 'param-row';
+            row.innerHTML = `<input type="number" class="input-inline" value="${val}" step="0.01"
+                onchange="onParamChange('${type}',${idx},this.value)">
+                <button class="remove-btn" onclick="removeParam('${type}',${idx})">x</button>`;
+            container.appendChild(row);
+        });
+    }
+
+    function addParam(type) {
+        if(type === 'planta-polos') polos_planta.push(-1);
+        if(type === 'planta-zeros') zeros_planta.push(0);
+        updateParamLists();
+        updateAll();
+    }
+
+    function removeParam(type, idx) {
+        if(type === 'planta-polos') polos_planta.splice(idx,1);
+        if(type === 'planta-zeros') zeros_planta.splice(idx,1);
+        updateParamLists();
+        updateAll();
+    }
+
+    function onParamChange(type, idx, value) {
+        value = parseFloat(value);
+        if(type === 'planta-polos') polos_planta[idx] = value;
+        if(type === 'planta-zeros') zeros_planta[idx] = value;
+        updateAll();
+    }
+
+    function updateParamLists() {
+        renderParamList('planta-polos-list', polos_planta, 'planta-polos');
+        renderParamList('planta-zeros-list', zeros_planta, 'planta-zeros');
+        document.getElementById('ganho').value = ganho;
+        document.getElementById('ganho-slider').value = ganho;
+        document.getElementById('ganho-slider-value').innerText = ganho.toFixed(2);
+    }
+
+    document.getElementById('ganho').addEventListener('change', function() {
+        ganho = parseFloat(this.value);
+        document.getElementById('ganho-slider').value = ganho;
+        document.getElementById('ganho-slider-value').innerText = ganho.toFixed(2);
+        updateAll();
+    });
+
+    function onSliderChange(val) {
+        ganho = parseFloat(val);
+        document.getElementById('ganho').value = ganho;
+        document.getElementById('ganho-slider-value').innerText = ganho.toFixed(2);
+        updateAll();
+    }
+
+    function updateAll() {
+        fetch('/lgr_backend', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                polos_planta: polos_planta,
+                zeros_planta: zeros_planta,
+                ganho: ganho
+            })
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            // Lugar das raízes
+            Plotly.newPlot('plot-lgr', data.lgr_plot.data, data.lgr_plot.layout, {responsive: true});
+            // Resposta ao degrau
+            Plotly.newPlot('plot-step', data.step_plot.data, data.step_plot.layout, {responsive: true});
+            // Função de transferência
+            document.getElementById('latex-ft').innerHTML = data.latex_ft || '';
+            document.getElementById('latex-planta').innerHTML = data.latex_planta || '';
+            if(window.MathJax) MathJax.typesetPromise();
+        });
+    }
+
+    // Inicialização
+    updateParamLists();
+    updateAll();
+    </script>
+</body>
+</html>

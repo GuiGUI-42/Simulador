@@ -4,6 +4,8 @@ import control as ctl
 import scipy.signal  # Adicione esta linha junto com os outros imports
 import io
 import base64
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import smtplib
 from email.mime.text import MIMEText
@@ -12,7 +14,11 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return redirect('/pagina4')
+    return redirect('/principal')
+
+@app.route('/principal')
+def principal():
+    return render_template('principal.html')
 
 @app.route('/pagina2')
 def pagina2():
@@ -228,6 +234,7 @@ def atualizar_pagina4():
 
     t_perturb_fechada = float(data.get("t_perturb_fechada", 20))
     amp_perturb_fechada = float(data.get("amp_perturb_fechada", 0.5))
+    multiplier = float(data.get("ts_multiplier", 0.5))  # Default multiplier is 0.5 (2x faster)
 
     # Polos e zeros da planta e do controlador (malha aberta)
     zeros_planta_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
@@ -319,38 +326,131 @@ def atualizar_pagina4():
         f"\\[ G(s) = \\frac{{{latex_poly(np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else [1.0], 's')}}}{{{latex_poly(den_planta, 's')}}} \\]"
     )
     latex_controlador_polinomial = (
-        f"\\[ G_c(s) = K_c \\cdot \\frac{{{latex_poly(np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else [1.0], 's')}}}{{{latex_poly(den_controlador, 's')}}} \\]"
-        if abs(ganho_controlador - 1.0) > 1e-8 else
-        f"\\[ G_c(s) = \\frac{{{latex_poly(np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else [1.0], 's')}}}{{{latex_poly(den_controlador, 's')}}} \\]"
+        f"\\[ G_c(s) = {ganho_controlador:.3g} \\cdot \\frac{{{latex_poly(np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else [1.0], 's')}}}{{{latex_poly(den_controlador, 's')}}} \\]"
+    )
+    latex_controlador_fatorada = (
+        f"\\[ G_c(s) = {ganho_controlador:.3g} \\cdot \\frac{{{latex_factored(zeros_controlador, 's')}}}{{{latex_factored(polos_controlador, 's')}}} \\]"
+    )
+    latex_controlador_parcial = (
+        f"\\[ G_c(s) = {ganho_controlador:.3g} \\cdot \\left({latex_partial_fraction(np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else [1.0], den_controlador, 's')}\\right) \\]"
     )
 
+    # Adicione as formas fatorada e fração parcial
+    latex_planta_fatorada = (
+        f"\\[ G(s) = \\frac{{{latex_factored(zeros_planta, 's')}}}{{{latex_factored(polos_planta, 's')}}} \\]"
+    )
+    
+    latex_planta_parcial = (
+        f"\\[ G(s) = {latex_partial_fraction(np.poly(zeros_planta_filtrados) if zeros_planta_filtrados else [1.0], den_planta, 's')} \\]"
+    )
+   
+    # Polinômio característico atual (denominador da malha fechada)
+    poly_caracteristico = np.atleast_1d(G_closed.den[0][0] if hasattr(G_closed.den, "__getitem__") and isinstance(G_closed.den[0], (list, np.ndarray)) else G_closed.den)
+    poly_caracteristico_latex = f"\\[ P_{{mf,\\,atual}}(s) = {latex_poly(poly_caracteristico, 's')} \\]"
+
     # --- Tempo de assentamento (5%) da malha aberta ---
-    y_final = yout_open[-1]
-    tol = 0.05 * abs(y_final)
-    idx_settle = np.where(np.abs(yout_open - y_final) > tol)[0]
-    if len(idx_settle) == 0:
-        ts_aberta = 0.0
+    polos_aberta = np.roots(den_planta)
+    ordem = len(polos_aberta)
+    ts_aberta = 0.0
+    ts_formula = ""
+    ts_explica = ""
+
+    if ordem == 1:
+        p = abs(np.real(polos_aberta[0]))
+        ts_aberta = 3 / p if p > 1e-8 else 0.0
+        ts_formula = r"T_{5\%} = \frac{3}{p}"
+        ts_explica = "Para sistemas com 1 polo, o tempo de assentamento (5%) é 3 dividido pelo módulo do polo."
+    elif ordem == 2:
+        p1, p2 = sorted([abs(np.real(p)) for p in polos_aberta])
+        if np.isclose(p1, p2):  # Polos iguais
+            ts_aberta = 4.8 / p1 if p1 > 1e-8 else 0.0
+            ts_formula = r"T_{5\%} = \frac{4.8}{p}"
+            ts_explica = "Para sistemas com 2 polos iguais, o tempo de assentamento (5%) é 4.8 dividido pelo módulo do polo."
+        else:  # Polos diferentes
+            ts_aberta = (3 / p1 + 1.5 / p2) if p1 > 1e-8 and p2 > 1e-8 else 0.0
+            ts_formula = r"T_{5\%} = \frac{3}{\text{Polo Lento}} + \frac{1.5}{\text{Polo Rápido}}"
+            ts_explica = "Para sistemas com 2 polos diferentes, o tempo de assentamento (5%) é a soma de 3 dividido pelo polo lento e 1.5 dividido pelo polo rápido."
     else:
-        ts_aberta = T_open[idx_settle[-1]+1] if idx_settle[-1]+1 < len(T_open) else T_open[-1]
+        partes_reais = [abs(np.real(p)) for p in polos_aberta if abs(np.real(p)) > 1e-8]
+        if partes_reais:
+            menor_real = min(partes_reais)
+            ts_aberta = 3 / menor_real
+            ts_formula = r"T_{5\%} = \frac{3}{\min(|\mathrm{Re}(p_i)|)}"
+            ts_explica = "Para sistemas de ordem maior, o tempo de assentamento (5%) é determinado pelo polo dominante (menor parte real em módulo)."
 
-    # Tempo de assentamento desejado (2x mais rápido)
-    ts_fechada = ts_aberta / 2 if ts_aberta > 0 else 0.0
+    # Tempo de assentamento desejado (usando o multiplicador do usuário)
+    ts_fechada = ts_aberta * multiplier if ts_aberta > 0 else 0.0
 
-    # Polinômio de malha fechada desejado (para PI, 2ª ordem)
-    pd_value = None
-    if len(polos_planta) == 1:
-        p_planta = polos_planta[0]
-        ts_fechada = ts_aberta / 2 if ts_aberta > 0 else 0.0
-        pd = 3 / ts_fechada if ts_fechada > 0 else 0.0
-        pd_value = pd
-        a1 = p_planta + pd
-        a0 = p_planta * pd
-        poly_fechada_latex = (
-            f"\\[ P_{{mf,\\,desejado}}(s) = s^2 + ({a1:.5f})s + ({a0:.5f}) \\]"
-            if ts_fechada > 0 else ""
-        )
+    # Calcular o polinômio desejado com base no tempo de assentamento desejado
+    if ts_fechada > 0:
+        ordem = len(poly_caracteristico) - 1  # Ordem do polinômio atual
+        if ordem == 1:
+            pd_value = 3 / ts_fechada
+        elif ordem == 2:
+            pd_value = 4.8 / ts_fechada
+        elif ordem == 3:
+            pd_value = 6.3 / ts_fechada
+        else:
+            pd_value = 3 / ts_fechada  # Default para ordens maiores
+        poly_fechada = np.poly([-pd_value] * ordem)  # Polos dominantes iguais
+        poly_fechada_latex = f"\\[ P_{{mf,\\,desejado}}(s) = {latex_poly(poly_fechada, 's')} \\]"
     else:
         poly_fechada_latex = ""
+        pd_value = None
+
+    # Polinômio característico atual (denominador da malha fechada)
+    poly_caracteristico = np.atleast_1d(G_closed.den[0][0] if hasattr(G_closed.den, "__getitem__") and isinstance(G_closed.den[0], (list, np.ndarray)) else G_closed.den)
+    poly_caracteristico_latex = f"\\[ P_{{mf,\\,atual}}(s) = {latex_poly(poly_caracteristico, 's')} \\]"
+
+    # --- Tempo de assentamento (5%) da malha aberta ---
+    polos_aberta = np.roots(den_planta)
+    ordem = len(polos_aberta)
+    ts_aberta = 0.0
+    ts_formula = ""
+    ts_explica = ""
+
+    if ordem == 1:
+        p = abs(np.real(polos_aberta[0]))
+        ts_aberta = 3 / p if p > 1e-8 else 0.0
+        ts_formula = r"T_{5\%} = \frac{3}{p}"
+        ts_explica = "Para sistemas com 1 polo, o tempo de assentamento (5%) é 3 dividido pelo módulo do polo."
+    elif ordem == 2:
+        p1, p2 = sorted([abs(np.real(p)) for p in polos_aberta])
+        if np.isclose(p1, p2):  # Polos iguais
+            ts_aberta = 4.8 / p1 if p1 > 1e-8 else 0.0
+            ts_formula = r"T_{5\%} = \frac{4.8}{p}"
+            ts_explica = "Para sistemas com 2 polos iguais, o tempo de assentamento (5%) é 4.8 dividido pelo módulo do polo."
+        else:  # Polos diferentes
+            ts_aberta = (3 / p1 + 1.5 / p2) if p1 > 1e-8 and p2 > 1e-8 else 0.0
+            ts_formula = r"T_{5\%} = \frac{3}{\text{Polo Lento}} + \frac{1.5}{\text{Polo Rápido}}"
+            ts_explica = "Para sistemas com 2 polos diferentes, o tempo de assentamento (5%) é a soma de 3 dividido pelo polo lento e 1.5 dividido pelo polo rápido."
+    else:
+        partes_reais = [abs(np.real(p)) for p in polos_aberta if abs(np.real(p)) > 1e-8]
+        if partes_reais:
+            menor_real = min(partes_reais)
+            ts_aberta = 3 / menor_real
+            ts_formula = r"T_{5\%} = \frac{3}{\min(|\mathrm{Re}(p_i)|)}"
+            ts_explica = "Para sistemas de ordem maior, o tempo de assentamento (5%) é determinado pelo polo dominante (menor parte real em módulo)."
+
+    # Tempo de assentamento desejado (usando o multiplicador do usuário)
+    ts_fechada = ts_aberta * multiplier if ts_aberta > 0 else 0.0
+
+    # Calcular o polinômio desejado com base no tempo de assentamento desejado
+    if ts_fechada > 0:
+        ordem = len(poly_caracteristico) - 1  # Ordem do polinômio atual
+        if ordem == 1:
+            pd_value = 3 / ts_fechada
+        elif ordem == 2:
+            pd_value = 4.8 / ts_fechada
+        elif ordem == 3:
+            pd_value = 6.3 / ts_fechada
+        else:
+            pd_value = 3 / ts_fechada  # Default para ordens maiores
+        poly_fechada = np.poly([-pd_value] * ordem)  # Polos dominantes iguais
+        poly_fechada_latex = f"\\[ P_{{mf,\\,desejado}}(s) = {latex_poly(poly_fechada, 's')} \\]"
+    else:
+        poly_fechada_latex = ""
+        pd_value = None
 
     # Polinômio característico atual (denominador da malha fechada)
     poly_caracteristico = np.atleast_1d(G_closed.den[0][0] if hasattr(G_closed.den, "__getitem__") and isinstance(G_closed.den[0], (list, np.ndarray)) else G_closed.den)
@@ -358,14 +458,20 @@ def atualizar_pagina4():
 
     return jsonify({
         "latex_planta_polinomial": latex_planta_polinomial,
+        "latex_planta_fatorada": latex_planta_fatorada,
+        "latex_planta_parcial": latex_planta_parcial,
         "latex_controlador_polinomial": latex_controlador_polinomial,
+        "latex_controlador_fatorada": latex_controlador_fatorada,
+        "latex_controlador_parcial": latex_controlador_parcial,
         "plot_pz_fechada": plot_pz_fechada,
         "plot_open_data": plot_open_data,
         "plot_closed_data": plot_closed_data,
         "ts_aberta": float(ts_aberta),
         "ts_fechada": float(ts_fechada),
+        "ts_formula": ts_formula,
+        "ts_explica": ts_explica,
         "poly_caracteristico_latex": poly_caracteristico_latex,
-        "poly_fechada_latex": poly_fechada_latex,
+        "poly_fechada_latex": poly_fechada_latex,  # Return the desired polynomial
         "pd_value": pd_value
     })
 
@@ -476,10 +582,14 @@ def latex_factored(roots, var='s'):
     for r in roots:
         if abs(r) < 1e-10:
             termos.append(f"{var}")
-        elif r < 0:
-            termos.append(f"({var} {r:+.3g})")
         else:
-            termos.append(f"({var} - {abs(r):.3g})")
+            # Exibe (s - r) para qualquer valor de r (positivo ou negativo)
+            sinal = "-" if r >= 0 else "+"
+            valor = abs(r)
+            if valor < 1e-10:
+                termos.append(f"{var}")
+            else:
+                termos.append(f"({var} {sinal} {valor:.3g})")
     return "".join(termos)
 
 def latex_partial_fraction(num, den, var='s'):
@@ -493,9 +603,14 @@ def latex_partial_fraction(num, den, var='s'):
     for ri, pi in zip(r, p):
         ri = np.round(ri, 4)
         pi = np.round(pi, 4)
+        # Novo: mostra apenas o sinal resultante no denominador
         if abs(ri.imag) < 1e-8:
-            termos.append(f"\\frac{{{ri.real}}}{{{var} - ({pi.real})}}")
+            # pi.real pode ser positivo ou negativo
+            sinal = "+" if pi.real >= 0 else "-"
+            valor = abs(pi.real)
+            termos.append(f"\\frac{{{ri.real}}}{{{var} {sinal} {valor}}}")
         else:
+            # Para casos complexos, mostra o número complexo inteiro
             termos.append(f"\\frac{{{ri}}}{{{var} - ({pi})}}")
     if k is not None and len(k) > 0:
         for i, ki in enumerate(k):
@@ -548,6 +663,9 @@ def nyquist_pagina4():
     num_controlador = np.poly(zeros_controlador_filtrados) if zeros_controlador_filtrados else np.array([1.0])
     num_controlador = ganho_controlador * num_controlador
     den_controlador = np.poly(polos_controlador_filtrados) if polos_controlador_filtrados else np.array([1.0])
+
+    # Definir G_open corretamente
+    G_open = ctl.tf(np.polymul(num_planta, num_controlador), np.polymul(den_planta, den_controlador))
 
     fig, ax = plt.subplots(figsize=(7, 4))  # Apenas aumenta o tamanho, não altera escala
     ctl.nyquist_plot(G_open, omega=np.logspace(-2, 2, 500), ax=ax, color='b')
@@ -615,7 +733,6 @@ def atualizar_discreto():
     latex_Gs = f"\\[ G(s) = \\frac{{{latex_poly(num, 's')}}}{{{latex_poly(den, 's')}}} \\]"
     return jsonify({
         "latex_Gs": latex_Gs,
-        "latex_Gz": latex_Gz,
         "plot_continuo": {
             "x": T_cont.tolist(),
             "y": y_cont.tolist()
@@ -835,6 +952,98 @@ def alocacao_polos_backend():
         "plot_step": plot_step
     })
 
+@app.route('/lgr_backend', methods=['POST'])
+def lgr_backend():
+    import numpy as np
+    import control as ctl
+
+    data = request.get_json()
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1, -2])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
+    ganho = float(data.get("ganho", 1.0))
+
+    # Função de transferência aberta: G(s) = K * (prod(s - z_i)) / (prod(s - p_i))
+    zeros_filtrados = [z for z in zeros_planta if abs(z) > 1e-8]
+    polos_filtrados = [p for p in polos_planta if abs(p) > 1e-8]
+    num = np.poly(zeros_filtrados) if zeros_filtrados else np.array([1.0])
+    den = np.poly(polos_filtrados)
+    G = ctl.tf(num, den)
+    G_lgr = ctl.tf(ganho * num, den)
+
+    # Corrigir chamada do root_locus: usar plot=False (não Plot)
+    lgr_data = ctl.root_locus(G, plot=False, grid=False)
+    rlist = lgr_data[0]  # polos para cada ganho
+    klist = lgr_data[1]
+    # Para destacar os polos para o ganho atual:
+    idx_k = np.argmin(np.abs(klist - ganho))
+    polos_atual = rlist[idx_k]
+
+    # Gráfico do lugar das raízes
+    lgr_traces = []
+    # Trajetória dos polos
+    for i in range(rlist.shape[1]):
+        lgr_traces.append({
+            "x": np.real(rlist[:, i]).tolist(),
+            "y": np.imag(rlist[:, i]).tolist(),
+            "mode": "lines",
+            "name": f"Trajetória Polo {i+1}",
+            "line": {"color": "#0074d9", "width": 2}
+        })
+    # Polos e zeros da planta
+    lgr_traces.append({
+        "x": np.real(polos_filtrados).tolist(),
+        "y": np.imag(polos_filtrados).tolist(),
+        "mode": "markers",
+        "name": "Polos",
+        "marker": {"color": "red", "size": 14, "symbol": "x-thin-open"}
+    })
+    lgr_traces.append({
+        "x": np.real(zeros_filtrados).tolist(),
+        "y": np.imag(zeros_filtrados).tolist(),
+        "mode": "markers",
+        "name": "Zeros",
+        "marker": {"color": "blue", "size": 12, "symbol": "circle-open"}
+    })
+    # Polos para o ganho atual
+    lgr_traces.append({
+        "x": np.real(polos_atual).tolist(),
+        "y": np.imag(polos_atual).tolist(),
+        "mode": "markers",
+        "name": f"Polos (K={ganho:.2f})",
+        "marker": {"color": "green", "size": 18, "symbol": "star"}
+    })
+
+    lgr_layout = {
+        "title": "Lugar das Raízes",
+        "xaxis": {"title": "Re", "zeroline": True, "zerolinewidth": 2},
+        "yaxis": {"title": "Im", "zeroline": True, "zerolinewidth": 2},
+        "showlegend": True,
+        "width": 700,
+        "height": 420
+    }
+
+    # Resposta ao degrau para o ganho atual
+    G_cl = ctl.feedback(G_lgr)
+    T = np.linspace(0, 20, 600)
+    T, yout = ctl.step_response(G_cl, T)
+    step_plot = {
+        "data": [
+            {"x": T.tolist(), "y": yout.tolist(), "mode": "lines", "name": "Resposta ao Degrau"}
+        ],
+        "layout": {"title": "Resposta ao Degrau (Malha Fechada)", "xaxis": {"title": "Tempo (s)"}, "yaxis": {"title": "Amplitude"}}
+    }
+
+    # LaTeX das funções de transferência
+    latex_planta = f"\\[ G(s) = \\frac{{{latex_poly(num, 's')}}}{{{latex_poly(den, 's')}}} \\]"
+    latex_ft = f"\\[ G_{'{cl}'}(s) = \\frac{{{latex_poly(ganho*num, 's')}}}{{{latex_poly(den + ganho*num, 's')}}} \\]"
+
+    return jsonify({
+        "lgr_plot": {"data": lgr_traces, "layout": lgr_layout},
+        "step_plot": step_plot,
+        "latex_planta": latex_planta,
+        "latex_ft": latex_ft
+    })
+
 def latex_poly(coeffs, var='s'):
     coeffs = np.array(coeffs, dtype=float)
     # Remove zeros à direita (constante no início)
@@ -873,10 +1082,14 @@ def latex_factored(roots, var='s'):
     for r in roots:
         if abs(r) < 1e-10:
             termos.append(f"{var}")
-        elif r < 0:
-            termos.append(f"({var} {r:+.3g})")
         else:
-            termos.append(f"({var} - {abs(r):.3g})")
+            # Exibe (s - r) para qualquer valor de r (positivo ou negativo)
+            sinal = "-" if r >= 0 else "+"
+            valor = abs(r)
+            if valor < 1e-10:
+                termos.append(f"{var}")
+            else:
+                termos.append(f"({var} {sinal} {valor:.3g})")
     return "".join(termos)
 
 def latex_partial_fraction(num, den, var='s'):
@@ -890,15 +1103,139 @@ def latex_partial_fraction(num, den, var='s'):
     for ri, pi in zip(r, p):
         ri = np.round(ri, 4)
         pi = np.round(pi, 4)
+        # Novo: mostra apenas o sinal resultante no denominador
         if abs(ri.imag) < 1e-8:
-            termos.append(f"\\frac{{{ri.real}}}{{{var} - ({pi.real})}}")
+            # pi.real pode ser positivo ou negativo
+            sinal = "+" if pi.real >= 0 else "-"
+            valor = abs(pi.real)
+            termos.append(f"\\frac{{{ri.real}}}{{{var} {sinal} {valor}}}")
         else:
+            # Para casos complexos, mostra o número complexo inteiro
             termos.append(f"\\frac{{{ri}}}{{{var} - ({pi})}}")
     if k is not None and len(k) > 0:
         for i, ki in enumerate(k):
             if abs(ki) > 1e-8:
                 termos.append(f"{ki:.4g}{var}^{len(k)-i-1}")
     return " + ".join(termos) if termos else "0"
+
+@app.route('/sinais')
+def sinais_page():
+    return render_template('sinais.html')
+
+@app.route('/sinais_backend', methods=['POST'])
+def sinais_backend():
+    data = request.get_json()
+    num = [float(x) for x in data.get("num", [1])]
+    den = [float(x) for x in data.get("den", [1, 1])]
+
+    G = ctl.tf(num, den)
+    zeros = np.roots(num)
+    polos = np.roots(den)
+    mod_zeros = np.abs(zeros)
+    mod_polos = np.abs(polos)
+
+    T = np.linspace(0, 20, 500)
+    T, yout = ctl.step_response(G, T)
+
+    latex_ft = f"\\[ G(s) = \\frac{{{latex_poly(num, 's')}}}{{{latex_poly(den, 's')}}} \\]"
+
+    # Novo: cálculo do diagrama de Bode se solicitado
+    bode_data = None
+    if data.get("bode", False):
+        try:
+            omega = np.logspace(-2, 2, 500)
+            mag, phase, omega = ctl.bode(G, omega=omega, dB=True, plot=False)
+            bode_data = {
+                "data": [
+                    {
+                        "x": omega.tolist(),
+                        "y": 20 * np.log10(mag).tolist(),
+                        "type": "scatter",
+                        "mode": "lines",
+                        "name": "Magnitude"
+                    },
+                    {
+                        "x": omega.tolist(),
+                        "y": np.degrees(phase).tolist(),
+                        "type": "scatter",
+                        "mode": "lines",
+                        "name": "Fase",
+                        "yaxis": "y2"
+                    }
+                ],
+                "layout": {
+                    "title": "Diagrama de Bode",
+                    "xaxis": {"title": "Frequência (rad/s)", "type": "log"},
+                    "yaxis": {"title": "Magnitude (dB)"},
+                    "yaxis2": {
+                        "title": "Fase (graus)",
+                        "overlaying": "y",
+                        "side": "right"
+                    },
+                    "legend": {"x": 0, "y": 1.1, "orientation": "h"}
+                }
+            }
+        except Exception as e:
+            bode_data = None
+
+    # Corrigir: polos e zeros para string (JSON serializável)
+    def complex_to_str(z):
+        if isinstance(z, complex):
+            if abs(z.imag) < 1e-8:
+                return f"{z.real:.6g}"
+            else:
+                return f"{z.real:.6g}{'+' if z.imag >= 0 else '-'}{abs(z.imag):.6g}j"
+        else:
+            return f"{z:.6g}"
+
+    zeros_json = [complex_to_str(z) for z in zeros]
+    polos_json = [complex_to_str(p) for p in polos]
+
+    return jsonify({
+        "latex_ft": latex_ft,
+        "mod_zeros": mod_zeros.tolist(),
+        "mod_polos": mod_polos.tolist(),
+        "zeros": zeros_json,
+        "polos": polos_json,
+        "step_response": {
+            "T": T.tolist(),
+            "y": yout.tolist()
+        },
+        "bode_data": bode_data
+    })
+
+@app.route('/raizes')
+def raizes():
+    return render_template('raizes.html')
+
+@app.route('/sinais_edo', methods=['POST'])
+def sinais_edo():
+    import sympy as sp
+    from scipy.signal import lti, step
+    data = request.get_json()
+    eq_str = data.get("edo", "")
+    t = np.linspace(0, 20, 500)
+    try:
+        # Parse EDO do tipo: y'' + 2y' + y = u(t)
+        y = sp.Function('y')
+        u = sp.Function('u')
+        t_sym = sp.symbols('t')
+        eq = sp.sympify(eq_str.replace("=", "-(") + ")", locals={'y': y(t_sym), "u": u(t_sym)})
+        eq = sp.Eq(eq, 0)
+        # Coeficientes da EDO (ordem até 2)
+        lhs = eq.lhs.expand()
+        a2 = lhs.coeff(y(t_sym).diff(t_sym, 2))
+        a1 = lhs.coeff(y(t_sym).diff(t_sym, 1))
+        a0 = lhs.coeff(y(t_sym))
+        b0 = -lhs.coeff(u(t_sym))
+        num = [float(b0)]
+        den = [float(a2), float(a1), float(a0)]
+        system = lti(num, den)
+        tout, yout = step(system, T=t)
+        latex = f"\\[ {sp.latex(eq)} \\]"
+        return jsonify({"t": tout.tolist(), "y": yout.tolist(), "latex": latex})
+    except Exception as e:
+        return jsonify({"t": [], "y": [], "latex": f"Erro ao interpretar EDO: {e}"})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

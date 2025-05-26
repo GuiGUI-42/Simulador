@@ -8,6 +8,8 @@
       src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=0.9">
+    <link rel="stylesheet" href="/static/css/slider-style.css">
     <style>
         body {
             margin: 0;
@@ -18,37 +20,122 @@
         .main-flex {
             display: flex;
             flex-direction: row;
-            gap: 32px;
+            gap: 12px; /* Reduzido para aproximar os blocos */
             align-items: flex-start;
             width: 100%;
             margin-bottom: 0;
+            margin-left: 0;
+            margin-right: 0;
         }
         .side-col {
             flex: 1 1 350px;
-            min-width: 340px;
-            max-width: 420px;
+            min-width: 320px;
+            max-width: 400px;
             background: #fff;
             border-radius: 10px;
             box-shadow: 0 2px 8px #0001;
-            padding: 24px 24px 16px 24px;
+            padding: 24px; /* Increase padding for better spacing */
             margin-bottom: 0;
+            margin-left: 0;
         }
         .center-col {
-            flex: 2 1 700px;
-            min-width: 500px;
-            max-width: 900px;
+            flex: 10 1 1200px;
+            min-width: 340px;
+            /* max-width: 100vw; */
+            max-width: 1600px; /* Aumenta a largura máxima para comportar os gráficos lado a lado */
             background: #fff;
             border-radius: 10px;
             box-shadow: 0 2px 8px #0001;
-            padding: 24px 24px 16px 24px;
+            padding: 24px; /* Increase padding for better spacing */
             margin-bottom: 0;
+            margin-left: 0;
         }
-        .box { border: 1px solid #ccc; border-radius: 8px; padding: 16px; margin: 16px 0; background: #f9f9f9; }
-        .highlight { background: #e6f7ff; padding: 8px; border-radius: 4px; }
+        .main-content-flex {
+            display: flex;
+            flex-direction: row;
+            gap: 32px;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .conteudo-central {
+            flex: 1 1 480px;
+            min-width: 340px;
+            max-width: 750px; /* Igual ao gráfico de resposta */
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+        .pz-col {
+            flex: 1 1 420px;
+            min-width: 340px;
+            max-width: 600px; /* Reduzido para evitar overflow */
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .graficos-flex {
+            display: flex;
+            flex-direction: row;
+            gap: 32px; /* Increase gap between graphs for better spacing */
+            width: 100%;
+        }
+        .grafico-col {
+            flex: 1 1 0;
+            min-width: 340px;
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .grafico-col .box {
+            margin-bottom: 0;
+            padding: 16px; /* Add padding inside graph boxes */
+        }
+        .grafico-col + .grafico-col {
+            margin-left: 0;
+        }
+        /* Remove margin-top from grafico-col-closed for alignment */
+        .grafico-col-closed {
+            margin-top: 0;
+        }
+        /* Ajuste para alinhar verticalmente os gráficos */
+        .graficos-flex .box {
+            height: 320px; /* Increased height for better proportions */
+            min-height: 300px; /* Adjusted minimum height */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        @media (max-width: 1600px) {
+            .center-col { max-width: 100vw; }
+            .conteudo-central, .pz-col { max-width: 100%; min-width: 0; }
+        }
+        @media (max-width: 1100px) {
+            .main-flex { flex-direction: column; }
+            .center-col, .side-col, .pz-col, .conteudo-central { max-width: 100%; min-width: 0; }
+            .main-content-flex { flex-direction: column; gap: 0; }
+            .graficos-flex { flex-direction: column; gap: 0; }
+            .grafico-col-closed { margin-top: 0; }
+        }
+        /* Remova ou ignore .pz-col */
+        .box { border: 1px solid #ddd; /* Softer border color */ border-radius: 10px; padding: 20px; /* Increase padding inside boxes */ background: #f9f9f9; margin-bottom: 20px; /* Add spacing between boxes */ }
+        .highlight { background: #eaf7ff; /* Softer highlight color */ border: 1px solid #b3e5fc; /* Add border to highlight box */ padding: 8px; border-radius: 4px; }
         .latex { font-size: 1.2em; margin: 8px 0; }
-        .input-inline { width: 80px; font-size: 1em; padding: 2px 4px; margin: 2px 4px; }
-        .param-list { margin-bottom: 8px; }
-        .param-list label { font-weight: bold; }
+        .input-inline {
+            width: 100%; /* Make inputs take full width for better alignment */
+            max-width: 120px; /* Limit maximum width for better aesthetics */
+            margin-top: 4px; /* Add spacing above inputs */
+            font-size: 1em;
+            padding: 2px 4px;
+            margin: 2px 4px;
+        }
+        .param-list {
+            margin-bottom: 16px; /* Increased spacing between parameter groups */
+        }
+        .param-list label {
+            font-weight: bold;
+            display: block; /* Ensure labels are on their own line */
+            margin-bottom: 4px; /* Add spacing below labels */
+        }
         .param-row { margin-bottom: 4px; }
         .remove-btn { color: #fff; background: #d9534f; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
         .add-btn { color: #fff; background: #5cb85c; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
@@ -62,7 +149,7 @@
             text-align: center;
             font-weight: bold;
             cursor: pointer;
-            margin-left: 6px;
+            margin-left: 8px; /* Add spacing between label and info icon */
             font-size: 14px;
             line-height: 18px;
             position: relative;
@@ -86,128 +173,247 @@
         }
         .row-flex { display: flex; align-items: center; gap: 10px; }
         .ft-block { margin-bottom: 24px; }
-        .section-title { font-size: 1.2em; font-weight: bold; margin-bottom: 12px; }
+        .section-title {
+            font-size: 1.4em; /* Slightly larger font for section titles */
+            font-weight: bold;
+            margin-bottom: 16px; /* Add spacing below section titles */
+            color: #333; /* Darker color for better readability */
+        }
         @media (max-width: 1100px) {
             .main-flex { flex-direction: column; }
-            .center-col, .side-col { max-width: 100%; min-width: 0; }
+            .center-col, .side-col, .pz-col { max-width: 100%; min-width: 0; }
+        }
+
+        /* Estilos do modo escuro */
+        body.dark-mode {
+            background: #121212;
+            color: #e0e0e0;
+        }
+        .dark-mode .box {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        .dark-mode .param-list label {
+            color: #e0e0e0;
+        }
+
+        /* Menu styles (copied from pagina4) */
+        .menu {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            z-index: 1000;
+        }
+        .menu-icon {
+            width: 24px;
+            height: 3px;
+            background: #333;
+            margin: 4px 0;
+            border-radius: 2px;
+        }
+        .menu-content {
+            display: none;
+            position: absolute;
+            top: 0; /* Alterado de 40px para 0 */
+            left: 0;
+            width: 260px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #0002;
+            padding: 16px;
+            z-index: 1102;
+        }
+        .menu-content.show {
+            display: block;
+        }
+        .menu-link {
+            display: block;
+            color: #1976d2;
+            text-decoration: none;
+            margin-bottom: 6px;
+            font-size: 1em;
+        }
+        .menu-link:hover {
+            color: #125ea2;
+        }
+        .dark-mode .menu-content {
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .dark-mode .menu-link {
+            color: #81a1c1;
+        }
+        .dark-mode .menu-link:hover {
+            color: #88c0f8;
         }
     </style>
 </head>
 <body>
-    <h2 style="margin-left:32px; margin-top:24px;">
-        Alocação de Polos - Interativa
-        <span class="info-icon">i
-            <span class="info-tooltip">
-                Adicione/remova polos e zeros da planta e do controlador, ajuste o ganho do controlador e veja em tempo real o impacto nos diagramas e respostas do sistema.<br>
-                Também veja o tempo de assentamento (5%) da malha aberta e defina o tempo desejado para a malha fechada.
-            </span>
-        </span>
-    </h2>
+    <!-- Menu de hambúrguer (igual pagina4) -->
+    <div class="menu">
+        <div style="display:flex; flex-direction:column; margin-right:8px; cursor:pointer;" id="menu-hamburger">
+            <div class="menu-icon"></div>
+            <div class="menu-icon"></div>
+            <div class="menu-icon"></div>
+        </div>
+        <div class="menu-content" id="menu-content">
+            <h1 style="margin:0 0 16px 0; font-size:2em; font-weight:bold;">SisCo</h1>
+            <label>
+                <input id="dark-mode-toggle" type="checkbox">
+                Ativar Modo Escuro
+            </label>
+            <div style="margin-top:10px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Modelagem</div>
+            <a href="/state" class="menu-link" style="margin-top:0;">Espaço de Estados (Sistema Mecânico)</a>
+            <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Sinais e Sistemas</div>
+            <a href="/estabilidade" class="menu-link" style="margin-top:0;">Estabilidade</a>
+            <a href="/sinais" class="menu-link" style="margin-top:0;">Resposta do Sistema</a>
+            <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Controle</div>
+            <a href="/alocacao" class="menu-link" style="margin-top:0;">Alocação de Polos</a>
+            <a href="/raizes" class="menu-link" style="margin-top:0;">Lugar das Raízes</a>
+            <a href="/pagina2" class="menu-link" style="margin-top:0;">Malha Aberta</a>
+            <a href="/blocos" class="menu-link" style="margin-top:0;">Diagrama de Blocos</a>
+            <a href="/pagina4" class="menu-link" style="margin-top:0;">Simulador Completo</a>
+            <a href="/pid" class="menu-link" style="margin-top:0;">Avançado (PID)</a>
+            <a href="/discreto" class="menu-link" style="margin-top:0;">Discreto</a>
+            <a href="/principal" class="menu-link" style="margin-top:16px;">Página Inicial</a>
+            <button id="abrir-feedback" style="margin-top:10px;">Enviar Feedback</button>
+        </div>
+    </div>
+    <!-- Espaço para não sobrepor o conteúdo -->
+    <div style="height:56px;"></div>
 
-    <div class="main-flex">
+    <!-- Modal de Feedback (igual pagina4) -->
+    <div id="modal-feedback" class="modal" style="display:none; position:fixed; z-index:2000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25);">
+        <div class="modal-content" style="background:#fff; max-width:400px; margin:60px auto; border-radius:12px; box-shadow:0 4px 24px #0003; padding:32px 28px 24px 28px; position:relative;">
+            <span class="close" id="fechar-modal" style="position:absolute; top:12px; right:18px; font-size:1.5em; cursor:pointer; color:#0074d9;">&times;</span>
+            <h3>Envie seu Feedback</h3>
+            <textarea id="feedback-texto" rows="6" style="width: 100%;" placeholder="Digite seu feedback aqui..."></textarea>
+            <button id="enviar-feedback">Enviar</button>
+        </div>
+    </div>
+
+    <!-- Conteúdo principal -->
+    <div class="main-flex" style="align-items: flex-start; margin-top: 16px;">
         <div class="side-col">
-            <div class="section-title">Parâmetros da Planta</div>
-            <div class="param-list">
-                <label>Polos da Planta:</label>
+            <div class="section-title">
+                Parâmetros da Planta
                 <span class="info-icon">i
                     <span class="info-tooltip">
-                        Polos determinam a estabilidade e a velocidade de resposta da planta.
+                        Os parâmetros da planta incluem polos, zeros e ganho. Eles determinam a dinâmica do sistema em malha aberta.
+                        <br><br>
+                        <b>Polos:</b> Determinam a estabilidade e a velocidade de resposta da planta.
+                        <br>
+                        <b>Zeros:</b> Podem modificar a forma da resposta transitória.
                     </span>
                 </span>
+            </div>
+            <div class="param-list">
+                <label>Polos da Planta:</label>
                 <div id="planta-polos-list"></div>
                 <button class="add-btn" onclick="addParam('planta-polos')">Adicionar Polo</button>
             </div>
             <div class="param-list">
                 <label>Zeros da Planta:</label>
-                <span class="info-icon">i
-                    <span class="info-tooltip">
-                        Zeros podem modificar a forma da resposta transitória.
-                    </span>
-                </span>
                 <div id="planta-zeros-list"></div>
                 <button class="add-btn" onclick="addParam('planta-zeros')">Adicionar Zero</button>
             </div>
-            <div style="margin: 24px 0 24px 0;">
+            <div class="param-list">
+                <label>Ganho da Planta (K<sub>g</sub>):</label>
+                <input type="number" id="ganho-planta" class="input-inline" value="1.0" step="0.01" onchange="onGanhoPlantaChange(this.value)">
+            </div>
+            <div style="margin: 24px 0;">
                 <span class="latex" id="latex-planta"></span>
             </div>
-            <div class="section-title">Parâmetros do Controlador</div>
-            <div class="param-list">
-                <label>Polos do Controlador:</label>
+            <div class="section-title">
+                Parâmetros do Controlador
                 <span class="info-icon">i
                     <span class="info-tooltip">
-                        Polos do controlador afetam a dinâmica do sistema em malha fechada.
+                        Os parâmetros do controlador incluem polos, zeros e ganho. Eles afetam a dinâmica do sistema em malha fechada.
+                        <br><br>
+                        <b>Polos:</b> Afetam a dinâmica do sistema em malha fechada, como estabilidade e tempo de resposta.
+                        <br>
+                        <b>Zeros:</b> Podem ser usados para cancelar polos indesejados da planta ou ajustar a resposta transitória.
                     </span>
                 </span>
+            </div>
+            <div class="param-list">
+                <label>Polos do Controlador:</label>
                 <div id="controlador-polos-list"></div>
                 <button class="add-btn" onclick="addParam('controlador-polos')">Adicionar Polo</button>
             </div>
             <div class="param-list">
                 <label>Zeros do Controlador:</label>
-                <span class="info-icon">i
-                    <span class="info-tooltip">
-                        Zeros do controlador podem ser usados para cancelar polos indesejados da planta.
-                    </span>
-                </span>
                 <div id="controlador-zeros-list"></div>
                 <button class="add-btn" onclick="addParam('controlador-zeros')">Adicionar Zero</button>
             </div>
             <div class="param-list">
-                <label>Ganho da Planta (K<sub>g</sub>):</label>
-                <input type="number" id="ganho-planta" class="input-inline" value="1.0" step="0.01" onchange="updateAll()">
-            </div>
-            <div class="param-list">
                 <label>Ganho do Controlador (K<sub>c</sub>):</label>
-                <input type="number" id="ganho-controlador" class="input-inline" value="1.0" step="0.01" onchange="updateAll()">
+                <input type="number" id="ganho-controlador" class="input-inline" value="1.0" step="0.01" onchange="onGanhoControladorChange(this.value)">
             </div>
-            <div style="margin: 24px 0 24px 0;">
+            <div style="margin: 24px 0;">
                 <span class="latex" id="latex-controlador"></span>
             </div>
         </div>
         <div class="center-col">
-            <div style="margin-bottom: 32px;">
-                <label style="font-weight:bold;">Diagrama de Polos e Zeros (Malha Fechada):</label>
-                <div id="plot-pz" style="margin-top:16px; width:100%; min-height:420px; height:420px; max-height:520px;"></div>
-            </div>
-            <div class="box highlight" style="margin-bottom: 32px;">
-                <div class="row-flex">
-                    <label>Tempo de assentamento (5%) da malha aberta:</label>
-                    <input type="text" id="ts-aberta" class="input-inline" readonly>
-                </div>
-                <div class="row-flex">
-                    <label>Tempo de assentamento desejado (malha fechada, 2x mais rápido):</label>
-                    <input type="text" id="ts-fechada" class="input-inline" readonly>
-                </div>
-                <div class="row-flex">
-                    <label>Polinômio característico atual:</label>
-                    <span class="latex" id="poly-caracteristico"></span>
-                    <span class="info-icon" onclick="abrirModalPmf()" style="cursor:pointer;">i</span>
-                </div>
-                <div class="row-flex" style="margin-top:8px;">
-                    <label>P<sub>d</sub>:</label>
-                    <span class="latex" id="pd-value"></span>
-                    <span style="margin-left:12px; font-size:0.98em;">(P<sub>d</sub> = 3 / T<sub>5</sub>)</span>
-                </div>
-                <div id="poly-desejado-expl" style="margin-top:18px; font-size:1.08em; background:#f6fafd; border-radius:6px; padding:10px 16px;">
-                    <b>Polinômio desejado:</b>
-                    <span class="latex" id="poly-desejado-latex"></span>
-                    <div style="margin-top:8px; font-size:0.98em;">
-                        <b>Como chegar no polinômio desejado?</b><br>
-                        <ul style="margin: 6px 0 0 18px; padding-left:0;">
-                            <li>Observe o polinômio desejado acima, que depende dos polos da planta e do tempo de assentamento desejado.</li>
-                            <li>Para atingir o polinômio desejado, ajuste os parâmetros do controlador (polos, zeros e ganho) de modo que o polinômio característico atual fique igual ao desejado.</li>
-                            <li>Use as fórmulas do <b>modal</b> (<span class="info-icon" id="pmf-modal-trigger" style="cursor:pointer;">i</span>) para calcular os parâmetros do controlador necessários.</li>
-                            <li>Exemplo: para planta de 1ª ordem e controlador PI, iguale os coeficientes do polinômio característico atual ao desejado e resolva para o ganho e zero do controlador.</li>
-                        </ul>
+            <div class="main-content-flex">
+                <div class="conteudo-central">
+                    <div class="box highlight">
+                        <div class="row-flex">
+                            <label>Tempo de assentamento (5%) da malha aberta:</label>
+                            <input type="text" id="ts-aberta" class="input-inline" readonly>
+                            <span class="info-icon" id="ts-modal-trigger" style="cursor:pointer;">i</span>
+                        </div>
+                        <div class="row-flex">
+                            <label>Tempo de assentamento desejado (malha fechada):</label>
+                            <input type="text" id="ts-fechada" class="input-inline" readonly>
+                            <span style="margin-left: 12px;">(Multiplicador:</span>
+                            <input type="number" id="ts-multiplier" class="input-inline" value="0.5" step="0.1" onchange="updateAll()">
+                            <span>)</span>
+                        </div>
+                        <div class="row-flex">
+                            <label>Polinômio característico atual:</label>
+                            <span class="latex" id="poly-caracteristico"></span>
+                            <span class="info-icon" onclick="abrirModalPmf()" style="cursor:pointer;">i</span>
+                        </div>
+                        <div class="row-flex" style="margin-top:8px;">
+                            <label>P<sub>d</sub>:</label>
+                            <span class="latex" id="pd-value"></span>
+                            <span style="margin-left:12px; font-size:0.98em;" id="pd-formula"></span>
+                            <span class="info-icon" onclick="abrirModalPd()" style="cursor:pointer;">i</span>
+                        </div>
+                        <div id="poly-desejado-expl" style="margin-top:18px; font-size:1.08em; background:#f6fafd; border-radius:6px; padding:10px 16px;">
+                            <b>Polinômio desejado:</b>
+                            <span class="latex" id="poly-desejado-latex"></span>
+                            <div style="margin-top:8px; font-size:0.98em;">
+                                <b>Como chegar no polinômio desejado?</b><br>
+                                <ul style="margin: 6px 0 0 18px; padding-left:0;">
+                                    <li>Observe o polinômio desejado acima, que depende dos polos da planta e do tempo de assentamento desejado.</li>
+                                    <li>Para atingir o polinômio desejado, ajuste os parâmetros do controlador (polos, zeros e ganho) de modo que o polinômio característico atual fique igual ao desejado.</li>
+                                    <li>Use as fórmulas do <b>modal</b> (<span class="info-icon" id="pmf-modal-trigger" style="cursor:pointer;">i</span>) para calcular os parâmetros do controlador necessários.</li>
+                                    <li>Exemplo: para planta de 1ª ordem e controlador PI, iguale os coeficientes do polinômio característico atual ao desejado e resolva para o ganho e zero do controlador.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="pz-col">
+                    <label style="font-weight:bold;">Diagrama de Polos e Zeros (Malha Fechada):</label>
+                    <div id="plot-pz" style="margin-top:16px; width:100%; min-height:600px; height:600px; max-height:90vh;"></div>
+                </div>
             </div>
-            <div class="box" style="margin-bottom: 32px;">
-                <label>Resposta ao Degrau (Malha Aberta):</label>
-                <div id="plot-open" style="width:100%; min-height:320px; height:320px;"></div>
-            </div>
-            <div class="box">
-                <label>Resposta ao Degrau (Malha Fechada):</label>
-                <div id="plot-closed" style="width:100%; min-height:320px; height:320px;"></div>
+            <div class="graficos-flex" style="margin-top: 24px;">
+                <div class="grafico-col">
+                    <div class="box">
+                        <label>Resposta ao Degrau (Malha Aberta):</label>
+                        <div id="plot-open" style="width:100%; flex:1 1 auto; height:100%;"></div>
+                    </div>
+                </div>
+                <div class="grafico-col">
+                    <div class="box">
+                        <label>Resposta ao Degrau (Malha Fechada):</label>
+                        <div id="plot-closed" style="width:100%; flex:1 1 auto; height:100%;"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -227,26 +433,63 @@
                 <br>
                 <i>Onde \( D \) e \( N \) são denominador e numerador da planta/controlador, respectivamente.</i>
                 <hr>
-                <b>1ª ordem (exemplo: planta 1ª ordem + P):</b><br>
-                \( P_{mf,desejado}(s) = s + p_d \)<br>
-                onde \( p_d = \frac{3}{T_{s,fechada}} \)<br>
-                <span style="font-size:0.95em;">
-                <i>Estrutura típica: \( s + K_c K_g \), onde \( K_g \) é o ganho estático da planta.</i>
+                <b>Como encontrar o polo desejado \( p_d \):</b>
+                <ul style="margin: 6px 0 0 18px; padding-left:0;">
+                    <li><b>1ª ordem:</b> \( p_d = \frac{3}{T_{s,fechada}} \)</li>
+                    <li><b>2ª ordem:</b> \( p_d = \frac{4.8}{T_{s,fechada}} \)</li>
+                    <li><b>3ª ordem:</b> \( p_d = \frac{6.3}{T_{s,fechada}} \)</li>
+                    
+                <span style="font-size:0.97em;">
+                    <i>O valor de \( p_d \) é usado para posicionar o polo dominante da malha fechada, tornando o sistema mais rápido conforme o tempo de assentamento desejado.</i>
                 </span>
                 <hr>
-                <b>2ª ordem (exemplo: planta 1ª ordem + PI):</b><br>
-                \( P_{mf,desejado}(s) = s^2 + (p_{planta} + p_d)s + p_{planta}p_d \)<br>
-                onde \( p_d = \frac{3}{T_{s,fechada}} \)
-                <hr>
-                <b>3ª ordem (exemplo: planta 2ª ordem + PI):</b><br>
-                \( P_{mf,desejado}(s) = s^3 + (p_1 + p_2 + p_d)s^2 + (p_1p_2 + (p_1 + p_2)p_d)s + p_1p_2p_d \)<br>
-                onde \( p_1, p_2 \) são polos da planta e \( p_d = \frac{3}{T_{s,fechada}} \)
-                <hr>
                 <b>Como usar:</b><br>
-                - Defina os polos da planta e do controlador.<br>
+                - Defina os polos e zeros da planta e do controlador.<br>
                 - Ajuste o tempo de assentamento desejado.<br>
                 - Compare o polinômio característico atual com o desejado.<br>
                 <div id="poly-fechada-info-modal" style="margin-top:12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal explicativo do tempo de assentamento -->
+    <div id="modal-ts" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); z-index:1001;">
+        <div style="background:#fff; max-width:540px; margin:60px auto; border-radius:12px; box-shadow:0 4px 24px #0003; padding:32px 28px 24px 28px; position:relative;">
+            <span style="position:absolute; top:12px; right:18px; font-size:1.5em; cursor:pointer; color:#0074d9;" onclick="fecharModalTs()">&times;</span>
+            <div style="font-size:1.1em; margin-bottom:18px;">
+                <b>Como é calculado o tempo de assentamento (5%)?</b>
+            </div>
+            <div style="font-size:1em;">
+                <b>Fórmulas para cada caso:</b>
+                <ul style="margin: 6px 0 0 18px; padding-left:0;">
+                    <li><b>1 Polo:</b> \( T_{5\%} = \frac{3}{p} \)</li>
+                    <li><b>2 Polos diferentes:</b> \( T_{5\%} = \frac{3}{\text{Polo Lento}} + \frac{1.5}{\text{Polo Rápido}} \)</li>
+                    <li><b>2 Polos iguais:</b> \( T_{5\%} = \frac{4.8}{p} \)</li>
+                    <li><b>De modo que:</b> \( \tau = \frac{1}{p} \)</li>
+                </ul>
+                <div style="margin-top:10px;" id="ts-explicacao-modal"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal explicativo do cálculo de Pd -->
+    <div id="modal-pd" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); z-index:1001;">
+        <div style="background:#fff; max-width:540px; margin:60px auto; border-radius:12px; box-shadow:0 4px 24px #0003; padding:32px 28px 24px 28px; position:relative;">
+            <span style="position:absolute; top:12px; right:18px; font-size:1.5em; cursor:pointer; color:#0074d9;" onclick="fecharModalPd()">&times;</span>
+            <div style="font-size:1.1em; margin-bottom:18px;">
+                <b>Fórmula para o cálculo de P<sub>d</sub>:</b>
+            </div>
+            <div style="font-size:1em;">
+                <b>Baseado na ordem do sistema:</b>
+                <ul style="margin: 6px 0 0 18px; padding-left:0;">
+                    <li><b>1ª ordem:</b> \( P_d = \frac{3}{T_{s,fechada}} \)</li>
+                    <li><b>2ª ordem:</b> \( P_d = \frac{4.8}{T_{s,fechada}} \)</li>
+                    <li><b>3ª ordem:</b> \( P_d = \frac{6.3}{T_{s,fechada}} \)</li>
+                    <li><b>nª ordem:</b> \( P_d = \frac{3}{T_{s,fechada}} \)</li>
+                </ul>
+                <span style="font-size:0.97em;">
+                    <i>O valor de \( P_d \) é ajustado conforme a ordem do polinômio característico atual.</i>
+                </span>
             </div>
         </div>
     </div>
@@ -274,29 +517,39 @@
     }
 
     function addParam(type) {
-        if(type === 'planta-polos') polos_planta.push(-1);
-        if(type === 'planta-zeros') zeros_planta.push(0);
-        if(type === 'controlador-polos') polos_controlador.push(-1);
-        if(type === 'controlador-zeros') zeros_controlador.push(0);
+        if (type === 'planta-polos') polos_planta.push(-1);
+        if (type === 'planta-zeros') zeros_planta.push(0);
+        if (type === 'controlador-polos') polos_controlador.push(-1);
+        if (type === 'controlador-zeros') zeros_controlador.push(0);
         updateParamLists();
         updateAll();
     }
 
     function removeParam(type, idx) {
-        if(type === 'planta-polos') polos_planta.splice(idx,1);
-        if(type === 'planta-zeros') zeros_planta.splice(idx,1);
-        if(type === 'controlador-polos') polos_controlador.splice(idx,1);
-        if(type === 'controlador-zeros') zeros_controlador.splice(idx,1);
+        if (type === 'planta-polos') polos_planta.splice(idx, 1);
+        if (type === 'planta-zeros') zeros_planta.splice(idx, 1);
+        if (type === 'controlador-polos') polos_controlador.splice(idx, 1);
+        if (type === 'controlador-zeros') zeros_controlador.splice(idx, 1);
         updateParamLists();
         updateAll();
     }
 
     function onParamChange(type, idx, value) {
         value = parseFloat(value);
-        if(type === 'planta-polos') polos_planta[idx] = value;
-        if(type === 'planta-zeros') zeros_planta[idx] = value;
-        if(type === 'controlador-polos') polos_controlador[idx] = value;
-        if(type === 'controlador-zeros') zeros_controlador[idx] = value;
+        if (type === 'planta-polos') polos_planta[idx] = value;
+        if (type === 'planta-zeros') zeros_planta[idx] = value;
+        if (type === 'controlador-polos') polos_controlador[idx] = value;
+        if (type === 'controlador-zeros') zeros_controlador[idx] = value;
+        updateAll();
+    }
+
+    function onGanhoPlantaChange(value) {
+        ganho_planta = parseFloat(value);
+        updateAll();
+    }
+
+    function onGanhoControladorChange(value) {
+        ganho_controlador = parseFloat(value);
         updateAll();
     }
 
@@ -309,77 +562,110 @@
         document.getElementById('ganho-planta').value = ganho_planta;
     }
 
-    document.getElementById('ganho-controlador').addEventListener('change', function() {
-        ganho_controlador = parseFloat(this.value);
-        updateAll();
-    });
-    document.getElementById('ganho-planta').addEventListener('change', function() {
-        ganho_planta = parseFloat(this.value);
-        updateAll();
-    });
-
     function updateAll() {
+        const multiplier = parseFloat(document.getElementById('ts-multiplier').value) || 0.5; // Default to 0.5 if invalid
         fetch('/atualizar_pagina4', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 polos_planta: polos_planta,
                 zeros_planta: zeros_planta,
                 polos_controlador: polos_controlador,
                 zeros_controlador: zeros_controlador,
-                ganho_controlador: ganho_controlador,
-                ganho_planta: ganho_planta
+                ganho_controlador: ganho_controlador, // Include ganho_controlador in the request
+                ganho_planta: ganho_planta,
+                ts_multiplier: multiplier // Send multiplier to the backend
             })
         })
         .then(resp => resp.json())
-        .then(data => {
-            // Funções de transferência
+        .then((data) => {
+            // Atualizar elementos da página com os dados recebidos
             document.getElementById('latex-planta').innerHTML = data.latex_planta_polinomial || '';
             document.getElementById('latex-controlador').innerHTML = data.latex_controlador_polinomial || '';
+            document.getElementById('poly-caracteristico').innerHTML = data.poly_caracteristico_latex || '';
+            document.getElementById('poly-desejado-latex').innerHTML = data.poly_fechada_latex || '';
 
-            // Pd
-            document.getElementById('pd-value').innerHTML = data.pd_value !== null && data.pd_value !== undefined
-                ? `\\( ${data.pd_value.toFixed(4)} \\)`
-                : '-';
+            // Atualizar gráficos
+            Plotly.newPlot('plot-pz', data.plot_pz_fechada.data, data.plot_pz_fechada.layout, { responsive: true });
+            Plotly.newPlot('plot-open', data.plot_open_data.data, data.plot_open_data.layout, { responsive: true });
+            Plotly.newPlot('plot-closed', data.plot_closed_data.data, data.plot_closed_data.layout, { responsive: true });
 
-            // Gráfico de polos e zeros de malha fechada
-            Plotly.newPlot('plot-pz', data.plot_pz_fechada.data, data.plot_pz_fechada.layout, {responsive: true});
-            Plotly.newPlot('plot-open', data.plot_open_data.data, data.plot_open_data.layout, {responsive: true});
-            Plotly.newPlot('plot-closed', data.plot_closed_data.data, data.plot_closed_data.layout, {responsive: true});
-
-            // Tempos de assentamento
+            // Atualizar tempos de assentamento
             document.getElementById('ts-aberta').value = (data.ts_aberta ? data.ts_aberta.toFixed(3) : '-') + " s";
             document.getElementById('ts-fechada').value = (data.ts_fechada ? data.ts_fechada.toFixed(3) : '-') + " s";
 
-            // Polinômio característico atual
-            document.getElementById('poly-caracteristico').innerHTML = data.poly_caracteristico_latex || '';
+            // Atualizar Pd
+            const pdValue = data.pd_value || '-'; // Certifique-se de que o backend retorna `pd_value`
+            document.getElementById('pd-value').innerHTML = pdValue;
 
-            // Polinômio desejado (para o modal e para exibição abaixo do Pmf)
-            document.getElementById('poly-fechada-info-modal').innerHTML = data.poly_fechada_latex
-                ? "<b>Polinômio desejado para os parâmetros atuais:</b><br>" + data.poly_fechada_latex
-                : "";
-            document.getElementById('poly-desejado-latex').innerHTML = data.poly_fechada_latex || '';
-
-            if(window.MathJax) MathJax.typesetPromise();
+            if (window.MathJax) MathJax.typesetPromise();
         });
     }
 
     // Modal PMF
     function abrirModalPmf() {
         document.getElementById('modal-pmf').style.display = 'block';
-        if(window.MathJax) MathJax.typesetPromise();
+        if (window.MathJax) MathJax.typesetPromise();
     }
+
     function fecharModalPmf() {
         document.getElementById('modal-pmf').style.display = 'none';
     }
 
-    // Inicialização
-    updateParamLists();
-    updateAll();
+    // Modal Tempo de Assentamento
+    function abrirModalTs() {
+        document.getElementById('modal-ts').style.display = 'block';
+        if (window.MathJax) MathJax.typesetPromise();
+    }
 
-    // Troque o onclick do info-icon para usar o id e adicionar o eventListener
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('pmf-modal-trigger').onclick = abrirModalPmf;
+    function fecharModalTs() {
+        document.getElementById('modal-ts').style.display = 'none';
+    }
+
+    // Modal Pd
+    function abrirModalPd() {
+        document.getElementById('modal-pd').style.display = 'block';
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function fecharModalPd() {
+        document.getElementById('modal-pd').style.display = 'none';
+    }
+
+    // Feedback Modal
+    document.getElementById('abrir-feedback').onclick = function () {
+        document.getElementById('modal-feedback').style.display = 'block';
+    };
+
+    document.getElementById('fechar-modal').onclick = function () {
+        document.getElementById('modal-feedback').style.display = 'none';
+    };
+
+    document.getElementById('enviar-feedback').onclick = async function () {
+        const texto = document.getElementById('feedback-texto').value;
+        const res = await fetch('/enviar_feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feedback: texto })
+        });
+        if (res.ok) {
+            alert('Feedback enviado com sucesso!');
+            document.getElementById('modal-feedback').style.display = 'none';
+            document.getElementById('feedback-texto').value = '';
+        } else {
+            alert('Erro ao enviar feedback.');
+        }
+    };
+
+    // Modo Escuro
+    document.getElementById('dark-mode-toggle').addEventListener('change', function (event) {
+        document.body.classList.toggle('dark-mode', event.target.checked);
+    });
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function () {
+        updateParamLists();
+        updateAll();
     });
     </script>
 </body>
