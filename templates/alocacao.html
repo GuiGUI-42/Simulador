@@ -4,296 +4,55 @@
     <meta charset="UTF-8">
     <title>Alocação de Polos Interativa</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async
-      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=0.9">
     <link rel="stylesheet" href="/static/css/slider-style.css">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: #f5f5f5;
-        }
-        .main-flex {
-            display: flex;
-            flex-direction: row;
-            gap: 12px; /* Reduzido para aproximar os blocos */
-            align-items: flex-start;
-            width: 100%;
-            margin-bottom: 0;
-            margin-left: 0;
-            margin-right: 0;
-        }
-        .side-col {
-            flex: 1 1 350px;
-            min-width: 320px;
-            max-width: 400px;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px #0001;
-            padding: 24px; /* Increase padding for better spacing */
-            margin-bottom: 0;
-            margin-left: 0;
-        }
-        .center-col {
-            flex: 10 1 1200px;
-            min-width: 340px;
-            /* max-width: 100vw; */
-            max-width: 1600px; /* Aumenta a largura máxima para comportar os gráficos lado a lado */
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px #0001;
-            padding: 24px; /* Increase padding for better spacing */
-            margin-bottom: 0;
-            margin-left: 0;
-        }
-        .main-content-flex {
-            display: flex;
-            flex-direction: row;
-            gap: 32px;
-            align-items: flex-start;
-            width: 100%;
-        }
-        .conteudo-central {
-            flex: 1 1 480px;
-            min-width: 340px;
-            max-width: 750px; /* Igual ao gráfico de resposta */
-            height: 300px;
-            display: flex;
-            flex-direction: column;
-        }
-        .pz-col {
-            flex: 1 1 420px;
-            min-width: 340px;
-            max-width: 600px; /* Reduzido para evitar overflow */
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .graficos-flex {
-            display: flex;
-            flex-direction: row;
-            gap: 32px; /* Increase gap between graphs for better spacing */
-            width: 100%;
-        }
-        .grafico-col {
-            flex: 1 1 0;
-            min-width: 340px;
-            max-width: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        .grafico-col .box {
-            margin-bottom: 0;
-            padding: 16px; /* Add padding inside graph boxes */
-        }
-        .grafico-col + .grafico-col {
-            margin-left: 0;
-        }
-        /* Remove margin-top from grafico-col-closed for alignment */
-        .grafico-col-closed {
-            margin-top: 0;
-        }
-        /* Ajuste para alinhar verticalmente os gráficos */
-        .graficos-flex .box {
-            height: 320px; /* Increased height for better proportions */
-            min-height: 300px; /* Adjusted minimum height */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-        @media (max-width: 1600px) {
-            .center-col { max-width: 100vw; }
-            .conteudo-central, .pz-col { max-width: 100%; min-width: 0; }
-        }
-        @media (max-width: 1100px) {
-            .main-flex { flex-direction: column; }
-            .center-col, .side-col, .pz-col, .conteudo-central { max-width: 100%; min-width: 0; }
-            .main-content-flex { flex-direction: column; gap: 0; }
-            .graficos-flex { flex-direction: column; gap: 0; }
-            .grafico-col-closed { margin-top: 0; }
-        }
-        /* Remova ou ignore .pz-col */
-        .box { border: 1px solid #ddd; /* Softer border color */ border-radius: 10px; padding: 20px; /* Increase padding inside boxes */ background: #f9f9f9; margin-bottom: 20px; /* Add spacing between boxes */ }
-        .highlight { background: #eaf7ff; /* Softer highlight color */ border: 1px solid #b3e5fc; /* Add border to highlight box */ padding: 8px; border-radius: 4px; }
-        .latex { font-size: 1.2em; margin: 8px 0; }
-        .input-inline {
-            width: 100%; /* Make inputs take full width for better alignment */
-            max-width: 120px; /* Limit maximum width for better aesthetics */
-            margin-top: 4px; /* Add spacing above inputs */
-            font-size: 1em;
-            padding: 2px 4px;
-            margin: 2px 4px;
-        }
-        .param-list {
-            margin-bottom: 16px; /* Increased spacing between parameter groups */
-        }
-        .param-list label {
-            font-weight: bold;
-            display: block; /* Ensure labels are on their own line */
-            margin-bottom: 4px; /* Add spacing below labels */
-        }
-        .param-row { margin-bottom: 4px; }
-        .remove-btn { color: #fff; background: #d9534f; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
-        .add-btn { color: #fff; background: #5cb85c; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; margin-left: 4px; }
-        .info-icon {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            background: #0074d9;
-            color: #fff;
-            border-radius: 50%;
-            text-align: center;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 8px; /* Add spacing between label and info icon */
-            font-size: 14px;
-            line-height: 18px;
-            position: relative;
-        }
-        .info-tooltip {
-            display: none;
-            position: absolute;
-            background: #fff;
-            color: #333;
-            border: 1px solid #0074d9;
-            border-radius: 6px;
-            padding: 8px;
-            z-index: 10;
-            width: 320px;
-            left: 25px;
-            top: -10px;
-            font-size: 0.95em;
-        }
-        .info-icon:hover .info-tooltip {
-            display: block;
-        }
-        .row-flex { display: flex; align-items: center; gap: 10px; }
-        .ft-block { margin-bottom: 24px; }
-        .section-title {
-            font-size: 1.4em; /* Slightly larger font for section titles */
-            font-weight: bold;
-            margin-bottom: 16px; /* Add spacing below section titles */
-            color: #333; /* Darker color for better readability */
-        }
-        @media (max-width: 1100px) {
-            .main-flex { flex-direction: column; }
-            .center-col, .side-col, .pz-col { max-width: 100%; min-width: 0; }
-        }
-
-        /* Estilos do modo escuro */
-        body.dark-mode {
-            background: #121212;
-            color: #e0e0e0;
-        }
-        .dark-mode .box {
-            background: #1e1e1e;
-            border-color: #333;
-        }
-        .dark-mode .param-list label {
-            color: #e0e0e0;
-        }
-
-        /* Menu styles (copied from pagina4) */
-        .menu {
-            position: fixed;
-            top: 8px;
-            left: 8px;
-            z-index: 1000;
-        }
-        .menu-icon {
-            width: 24px;
-            height: 3px;
-            background: #333;
-            margin: 4px 0;
-            border-radius: 2px;
-        }
-        .menu-content {
-            display: none;
-            position: absolute;
-            top: 0; /* Alterado de 40px para 0 */
-            left: 0;
-            width: 260px;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px #0002;
-            padding: 16px;
-            z-index: 1102;
-        }
-        .menu-content.show {
-            display: block;
-        }
-        .menu-link {
-            display: block;
-            color: #1976d2;
-            text-decoration: none;
-            margin-bottom: 6px;
-            font-size: 1em;
-        }
-        .menu-link:hover {
-            color: #125ea2;
-        }
-        .dark-mode .menu-content {
-            background: #1e1e1e;
-            color: #e0e0e0;
-        }
-        .dark-mode .menu-link {
-            color: #81a1c1;
-        }
-        .dark-mode .menu-link:hover {
-            color: #88c0f8;
-        }
-    </style>
 </head>
 <body>
-    <!-- Menu de hambúrguer (igual pagina4) -->
+    <!-- Menu de hambúrguer -->
     <div class="menu">
-        <div style="display:flex; flex-direction:column; margin-right:8px; cursor:pointer;" id="menu-hamburger">
+        <div id="menu-hamburger">
             <div class="menu-icon"></div>
             <div class="menu-icon"></div>
             <div class="menu-icon"></div>
         </div>
         <div class="menu-content" id="menu-content">
-            <h1 style="margin:0 0 16px 0; font-size:2em; font-weight:bold;">SisCo</h1>
+            <h1>SisCo</h1>
             <label>
                 <input id="dark-mode-toggle" type="checkbox">
                 Ativar Modo Escuro
             </label>
-            <div style="margin-top:10px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Modelagem</div>
-            <a href="/state" class="menu-link" style="margin-top:0;">Espaço de Estados (Sistema Mecânico)</a>
-            <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Sinais e Sistemas</div>
-            <a href="/estabilidade" class="menu-link" style="margin-top:0;">Estabilidade</a>
-            <a href="/sinais" class="menu-link" style="margin-top:0;">Resposta do Sistema</a>
-            <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Controle</div>
-            <a href="/alocacao" class="menu-link" style="margin-top:0;">Alocação de Polos</a>
-            <a href="/raizes" class="menu-link" style="margin-top:0;">Lugar das Raízes</a>
-            <a href="/pagina2" class="menu-link" style="margin-top:0;">Malha Aberta</a>
-            <a href="/blocos" class="menu-link" style="margin-top:0;">Diagrama de Blocos</a>
-            <a href="/pagina4" class="menu-link" style="margin-top:0;">Simulador Completo</a>
-            <a href="/pid" class="menu-link" style="margin-top:0;">Avançado (PID)</a>
-            <a href="/discreto" class="menu-link" style="margin-top:0;">Discreto</a>
-            <a href="/principal" class="menu-link" style="margin-top:16px;">Página Inicial</a>
-            <button id="abrir-feedback" style="margin-top:10px;">Enviar Feedback</button>
+            <div>Modelagem</div>
+            <a href="/state" class="menu-link">Espaço de Estados (Sistema Mecânico)</a>
+            <div>Sinais e Sistemas</div>
+            <a href="/estabilidade" class="menu-link">Estabilidade</a>
+            <a href="/sinais" class="menu-link">Resposta do Sistema</a>
+            <div>Controle</div>
+            <a href="/alocacao" class="menu-link">Alocação de Polos</a>
+            <a href="/raizes" class="menu-link">Lugar das Raízes</a>
+            <a href="/pagina2" class="menu-link">Malha Aberta</a>
+            <a href="/blocos" class="menu-link">Diagrama de Blocos</a>
+            <a href="/pagina4" class="menu-link">Simulador Completo</a>
+            <a href="/pid" class="menu-link">Avançado (PID)</a>
+            <a href="/discreto" class="menu-link">Discreto</a>
+            <a href="/principal" class="menu-link">Página Inicial</a>
+            <button id="abrir-feedback">Enviar Feedback</button>
         </div>
     </div>
-    <!-- Espaço para não sobrepor o conteúdo -->
     <div style="height:56px;"></div>
 
-    <!-- Modal de Feedback (igual pagina4) -->
-    <div id="modal-feedback" class="modal" style="display:none; position:fixed; z-index:2000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25);">
-        <div class="modal-content" style="background:#fff; max-width:400px; margin:60px auto; border-radius:12px; box-shadow:0 4px 24px #0003; padding:32px 28px 24px 28px; position:relative;">
-            <span class="close" id="fechar-modal" style="position:absolute; top:12px; right:18px; font-size:1.5em; cursor:pointer; color:#0074d9;">&times;</span>
+    <!-- Modal de Feedback -->
+    <div id="modal-feedback" class="modal">
+        <div class="modal-content">
+            <span class="close" id="fechar-modal">&times;</span>
             <h3>Envie seu Feedback</h3>
-            <textarea id="feedback-texto" rows="6" style="width: 100%;" placeholder="Digite seu feedback aqui..."></textarea>
+            <textarea id="feedback-texto" rows="6" placeholder="Digite seu feedback aqui..."></textarea>
             <button id="enviar-feedback">Enviar</button>
         </div>
     </div>
 
     <!-- Conteúdo principal -->
-    <div class="main-flex" style="align-items: flex-start; margin-top: 16px;">
+    <div class="main-flex">
         <div class="side-col">
             <div class="section-title">
                 Parâmetros da Planta
@@ -321,7 +80,8 @@
                 <label>Ganho da Planta (K<sub>g</sub>):</label>
                 <input type="number" id="ganho-planta" class="input-inline" value="1.0" step="0.01" onchange="onGanhoPlantaChange(this.value)">
             </div>
-            <div style="margin: 24px 0;">
+            <button class="add-btn" onclick="generateRandomFT()">Gerar FT Aleatória</button>
+            <div>
                 <span class="latex" id="latex-planta"></span>
             </div>
             <div class="section-title">
@@ -350,7 +110,7 @@
                 <label>Ganho do Controlador (K<sub>c</sub>):</label>
                 <input type="number" id="ganho-controlador" class="input-inline" value="1.0" step="0.01" onchange="onGanhoControladorChange(this.value)">
             </div>
-            <div style="margin: 24px 0;">
+            <div>
                 <span class="latex" id="latex-controlador"></span>
             </div>
         </div>
@@ -381,15 +141,15 @@
                             <span style="margin-left:12px; font-size:0.98em;" id="pd-formula"></span>
                             <span class="info-icon" onclick="abrirModalPd()" style="cursor:pointer;">i</span>
                         </div>
-                        <div id="poly-desejado-expl" style="margin-top:18px; font-size:1.08em; background:#f6fafd; border-radius:6px; padding:10px 16px;">
+                        <div id="poly-desejado-expl" style="margin-top:18px; font-size:1.08em;">
                             <b>Polinômio desejado:</b>
                             <span class="latex" id="poly-desejado-latex"></span>
                             <div style="margin-top:8px; font-size:0.98em;">
                                 <b>Como chegar no polinômio desejado?</b><br>
-                                <ul style="margin: 6px 0 0 18px; padding-left:0;">
+                                <ul>
                                     <li>Observe o polinômio desejado acima, que depende dos polos da planta e do tempo de assentamento desejado.</li>
                                     <li>Para atingir o polinômio desejado, ajuste os parâmetros do controlador (polos, zeros e ganho) de modo que o polinômio característico atual fique igual ao desejado.</li>
-                                    <li>Use as fórmulas do <b>modal</b> (<span class="info-icon" id="pmf-modal-trigger" style="cursor:pointer;">i</span>) para calcular os parâmetros do controlador necessários.</li>
+                                   
                                     <li>Exemplo: para planta de 1ª ordem e controlador PI, iguale os coeficientes do polinômio característico atual ao desejado e resolva para o ganho e zero do controlador.</li>
                                 </ul>
                             </div>
@@ -411,7 +171,7 @@
                 <div class="grafico-col">
                     <div class="box">
                         <label>Resposta ao Degrau (Malha Fechada):</label>
-                        <div id="plot-closed" style="width:100%; flex:1 1 auto; height:100%;"></div>
+                        <div id="novo-plot-closed" style="width:100%; flex:1 1 auto; height:100%;"></div>
                     </div>
                 </div>
             </div>
@@ -572,33 +332,61 @@
                 zeros_planta: zeros_planta,
                 polos_controlador: polos_controlador,
                 zeros_controlador: zeros_controlador,
-                ganho_controlador: ganho_controlador, // Include ganho_controlador in the request
+                ganho_controlador: ganho_controlador,
                 ganho_planta: ganho_planta,
-                ts_multiplier: multiplier // Send multiplier to the backend
+                ts_multiplier: multiplier
             })
         })
         .then(resp => resp.json())
         .then((data) => {
             // Atualizar elementos da página com os dados recebidos
-            document.getElementById('latex-planta').innerHTML = data.latex_planta_polinomial || '';
-            document.getElementById('latex-controlador').innerHTML = data.latex_controlador_polinomial || '';
+
+            // Gerar FT fatorada da planta
+            const polosPlantaLatex = polos_planta.map(p => `(s ${p >= 0 ? '+' : '-'} ${Math.abs(p)})`).join('');
+            const zerosPlantaLatex = zeros_planta.map(z => `(s ${z >= 0 ? '+' : '-'} ${Math.abs(z)})`).join('');
+            const factoredFormPlanta = `\\( G(s) = ${ganho_planta} \\cdot \\frac{${zerosPlantaLatex || '1'}}{${polosPlantaLatex}} \\)`;
+            document.getElementById('latex-planta').innerHTML = factoredFormPlanta;
+
+            // Gerar FT fatorada do controlador
+            const polosControladorLatex = polos_controlador.map(p => `(s ${p >= 0 ? '+' : '-'} ${Math.abs(p)})`).join('');
+            const zerosControladorLatex = zeros_controlador.map(z => `(s ${z >= 0 ? '+' : '-'} ${Math.abs(z)})`).join('');
+            const factoredFormControlador = `\\( C(s) = ${ganho_controlador} \\cdot \\frac{${zerosControladorLatex || '1'}}{${polosControladorLatex || '1'}} \\)`;
+            document.getElementById('latex-controlador').innerHTML = factoredFormControlador;
+
+            // Atualizar outros elementos
             document.getElementById('poly-caracteristico').innerHTML = data.poly_caracteristico_latex || '';
             document.getElementById('poly-desejado-latex').innerHTML = data.poly_fechada_latex || '';
 
             // Atualizar gráficos
             Plotly.newPlot('plot-pz', data.plot_pz_fechada.data, data.plot_pz_fechada.layout, { responsive: true });
             Plotly.newPlot('plot-open', data.plot_open_data.data, data.plot_open_data.layout, { responsive: true });
-            Plotly.newPlot('plot-closed', data.plot_closed_data.data, data.plot_closed_data.layout, { responsive: true });
+            
 
             // Atualizar tempos de assentamento
             document.getElementById('ts-aberta').value = (data.ts_aberta ? data.ts_aberta.toFixed(3) : '-') + " s";
             document.getElementById('ts-fechada').value = (data.ts_fechada ? data.ts_fechada.toFixed(3) : '-') + " s";
 
             // Atualizar Pd
-            const pdValue = data.pd_value || '-'; // Certifique-se de que o backend retorna `pd_value`
+            const pdValue = data.pd_value || '-';
             document.getElementById('pd-value').innerHTML = pdValue;
 
             if (window.MathJax) MathJax.typesetPromise();
+            fetch('/novo_grafico_fechado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            polos_planta: polos_planta,
+            zeros_planta: zeros_planta,
+            polos_controlador: polos_controlador,
+            zeros_controlador: zeros_controlador,
+            ganho_controlador: ganho_controlador,
+            ganho_planta: ganho_planta
+        })
+    })
+    .then(resp => resp.json())
+    .then((data) => {
+        Plotly.newPlot('novo-plot-closed', data.novo_grafico_data.data, data.novo_grafico_data.layout, { responsive: true });
+    });
         });
     }
 
@@ -660,6 +448,7 @@
     // Modo Escuro
     document.getElementById('dark-mode-toggle').addEventListener('change', function (event) {
         document.body.classList.toggle('dark-mode', event.target.checked);
+        if (window.MathJax) MathJax.typesetPromise(); // Atualizar MathJax no modo escuro
     });
 
     // Inicialização
@@ -667,6 +456,54 @@
         updateParamLists();
         updateAll();
     });
+
+    function generateRandomFT() {
+        // Gerar polos e zeros aleatórios
+        const numPolos = Math.floor(Math.random() * 2) + 1; // 1 ou 2 polos
+        const numZeros = Math.floor(Math.random() * 2); // 0 ou 1 zero
+        polos_planta = Array.from({ length: numPolos }, () => -(Math.random() * 10 + 1).toFixed(2));
+        zeros_planta = Array.from({ length: numZeros }, () => -(Math.random() * 10 + 1).toFixed(2));
+        ganho_planta = (Math.random() * 5 + 0.5).toFixed(2); // Ganho aleatório entre 0.5 e 5
+
+        // Gerar representação LaTeX da FT
+        const polosLatex = polos_planta.map(p => `(s ${p >= 0 ? '+' : '-'} ${Math.abs(p)})`).join('');
+        const zerosLatex = zeros_planta.map(z => `(s ${z >= 0 ? '+' : '-'} ${Math.abs(z)})`).join('');
+        const factoredForm = `\\( G(s) = ${ganho_planta} \\cdot \\frac{${zerosLatex || '1'}}{${polosLatex}} \\)`;
+
+        // Atualizar o LaTeX na página
+        document.getElementById('latex-planta').innerHTML = factoredForm;
+        if (window.MathJax) MathJax.typesetPromise();
+
+        // Atualizar listas de parâmetros e outros elementos
+        updateParamLists();
+        updateAll();
+    }
+
+    const menuHamburger = document.getElementById('menu-hamburger');
+    const menuContent = document.getElementById('menu-content');
+
+    // Abrir o menu ao passar o mouse por cima
+    menuHamburger.addEventListener('mouseover', function () {
+        menuContent.classList.add('show');
+    });
+
+    // Fechar o menu ao tirar o mouse de cima
+    menuHamburger.addEventListener('mouseout', function () {
+        menuContent.classList.remove('show');
+    });
+
+    // Garantir que o menu não feche ao passar o mouse sobre ele
+    menuContent.addEventListener('mouseover', function () {
+        menuContent.classList.add('show');
+    });
+
+    menuContent.addEventListener('mouseout', function () {
+        menuContent.classList.remove('show');
+    });
+
+    document.getElementById('ts-modal-trigger').onclick = function () {
+        abrirModalTs();
+    };
     </script>
 </body>
 </html>

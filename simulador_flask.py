@@ -1237,5 +1237,44 @@ def sinais_edo():
     except Exception as e:
         return jsonify({"t": [], "y": [], "latex": f"Erro ao interpretar EDO: {e}"})
 
+@app.route('/novo_grafico_fechado', methods=['POST'])
+def novo_grafico_fechado():
+    data = request.get_json()
+    polos_planta = [float(p) for p in data.get("polos_planta", [-1])]
+    zeros_planta = [float(z) for z in data.get("zeros_planta", [0])]
+    polos_controlador = [float(p) for p in data.get("polos_controlador", [-1])]
+    zeros_controlador = [float(z) for z in data.get("zeros_controlador", [0])]
+    ganho_controlador = float(data.get("ganho_controlador", 1.0))
+    ganho_planta = float(data.get("ganho_planta", 1.0))
+
+    # Funções de transferência
+    num_planta = ganho_planta * (np.poly(zeros_planta) if zeros_planta else np.array([1.0]))
+    den_planta = np.poly(polos_planta)
+    num_controlador = ganho_controlador * (np.poly(zeros_controlador) if zeros_controlador else np.array([1.0]))
+    den_controlador = np.poly(polos_controlador) if len(polos_controlador) > 0 else np.array([1.0])
+
+    G_planta = ctl.tf(num_planta, den_planta)
+    G_controlador = ctl.tf(num_controlador, den_controlador)
+    G_closed = ctl.feedback(G_planta * G_controlador)
+
+    # Resposta ao degrau (Malha Fechada - sem perturbação)
+    T = np.linspace(0, 50, 1000)
+    _, yout_closed = ctl.step_response(G_closed, T)
+
+    # Dados para o novo gráfico
+    novo_grafico_data = {
+        "data": [
+            {"x": T.tolist(), "y": yout_closed.tolist(), "mode": "lines", "name": "Resposta ao Degrau (Malha Fechada)"}
+        ],
+        "layout": {
+            "title": "Novo Gráfico: Resposta ao Degrau (Malha Fechada)",
+            "xaxis": {"title": "Tempo (s)"},
+            "yaxis": {"title": "Amplitude"}
+        }
+    }
+
+    return jsonify({"novo_grafico_data": novo_grafico_data})
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True)
+    #host='0.0.0.0'
