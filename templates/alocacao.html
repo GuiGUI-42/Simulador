@@ -7,7 +7,13 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <link rel="stylesheet" href="/static/css/slider-style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=0.9">
 </head>
+<style>
+  body {
+    zoom: 0.9;
+  }
+</style>
 <body>
     <!-- Menu de hambúrguer -->
     <div class="menu">
@@ -25,10 +31,9 @@
             <div>Modelagem</div>
             <a href="/state" class="menu-link">Espaço de Estados (Sistema Mecânico)</a>
             <div>Sinais e Sistemas</div>
-            <a href="/estabilidade" class="menu-link">Estabilidade</a>
+           
             <a href="/sinais" class="menu-link">Resposta do Sistema</a>
             <div>Controle</div>
-            <a href="/alocacao" class="menu-link">Alocação de Polos</a>
             <a href="/raizes" class="menu-link">Lugar das Raízes</a>
             <a href="/pagina2" class="menu-link">Malha Aberta</a>
             <a href="/blocos" class="menu-link">Diagrama de Blocos</a>
@@ -125,10 +130,14 @@
                         </div>
                         <div class="row-flex">
                             <label>Tempo de assentamento desejado (malha fechada):</label>
-                            <input type="text" id="ts-fechada" class="input-inline" readonly>
+                            <input type="text" id="ts-desejado" class="input-inline" readonly>
                             <span style="margin-left: 12px;">(Multiplicador:</span>
                             <input type="number" id="ts-multiplier" class="input-inline" value="0.5" step="0.1" onchange="updateAll()">
                             <span>)</span>
+                        </div>
+                        <div class="row-flex">
+                            <label>Tempo de assentamento real (malha fechada):</label>
+                            <input type="text" id="ts-fechada" class="input-inline" readonly>
                         </div>
                         <div class="row-flex">
                             <label>Polinômio característico atual:</label>
@@ -138,7 +147,6 @@
                         <div class="row-flex" style="margin-top:8px;">
                             <label>P<sub>d</sub>:</label>
                             <span class="latex" id="pd-value"></span>
-                            <span style="margin-left:12px; font-size:0.98em;" id="pd-formula"></span>
                             <span class="info-icon" onclick="abrirModalPd()" style="cursor:pointer;">i</span>
                         </div>
                         <div id="poly-desejado-expl" style="margin-top:18px; font-size:1.08em;">
@@ -323,8 +331,8 @@
     }
 
     function updateAll() {
-        const multiplier = parseFloat(document.getElementById('ts-multiplier').value) || 0.5; // Default to 0.5 if invalid
-        fetch('/atualizar_pagina4', {
+        const multiplier = parseFloat(document.getElementById('ts-multiplier').value) || 0.5;
+        fetch('/alocacao_polos_backend', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -339,56 +347,63 @@
         })
         .then(resp => resp.json())
         .then((data) => {
-            // Atualizar elementos da página com os dados recebidos
-
-            // Gerar FT fatorada da planta
-            const polosPlantaLatex = polos_planta.map(p => `(s ${p >= 0 ? '+' : '-'} ${Math.abs(p)})`).join('');
-            const zerosPlantaLatex = zeros_planta.map(z => `(s ${z >= 0 ? '+' : '-'} ${Math.abs(z)})`).join('');
-            const factoredFormPlanta = `\\( G(s) = ${ganho_planta} \\cdot \\frac{${zerosPlantaLatex || '1'}}{${polosPlantaLatex}} \\)`;
-            document.getElementById('latex-planta').innerHTML = factoredFormPlanta;
-
-            // Gerar FT fatorada do controlador
-            const polosControladorLatex = polos_controlador.map(p => `(s ${p >= 0 ? '+' : '-'} ${Math.abs(p)})`).join('');
-            const zerosControladorLatex = zeros_controlador.map(z => `(s ${z >= 0 ? '+' : '-'} ${Math.abs(z)})`).join('');
-            const factoredFormControlador = `\\( C(s) = ${ganho_controlador} \\cdot \\frac{${zerosControladorLatex || '1'}}{${polosControladorLatex || '1'}} \\)`;
-            document.getElementById('latex-controlador').innerHTML = factoredFormControlador;
-
-            // Atualizar outros elementos
-            document.getElementById('poly-caracteristico').innerHTML = data.poly_caracteristico_latex || '';
-            document.getElementById('poly-desejado-latex').innerHTML = data.poly_fechada_latex || '';
-
-            // Atualizar gráficos
-            Plotly.newPlot('plot-pz', data.plot_pz_fechada.data, data.plot_pz_fechada.layout, { responsive: true });
-            Plotly.newPlot('plot-open', data.plot_open_data.data, data.plot_open_data.layout, { responsive: true });
-            
-
             // Atualizar tempos de assentamento
-            document.getElementById('ts-aberta').value = (data.ts_aberta ? data.ts_aberta.toFixed(3) : '-') + " s";
-            document.getElementById('ts-fechada').value = (data.ts_fechada ? data.ts_fechada.toFixed(3) : '-') + " s";
+            document.getElementById('ts-aberta').value = (data.tempo_assentamento_aberta !== undefined ? data.tempo_assentamento_aberta + " s" : "");
+            document.getElementById('ts-fechada').value = (data.tempo_assentamento_fechada !== undefined ? data.tempo_assentamento_fechada + " s" : "");
+            // Atualizar tempo de assentamento desejado
+            document.getElementById('ts-desejado').value = (data.ts_desejado !== undefined ? data.ts_desejado + " s" : "");
 
             // Atualizar Pd
-            const pdValue = data.pd_value || '-';
-            document.getElementById('pd-value').innerHTML = pdValue;
+            if (data.pd_value !== undefined) {
+                document.getElementById('pd-value').innerHTML = data.pd_value;
+            } else {
+                document.getElementById('pd-value').innerHTML = '';
+            }
+
+            // Atualizar FT da planta
+            if (data.latex_planta !== undefined) {
+                document.getElementById('latex-planta').innerHTML = data.latex_planta;
+            }
+
+            // Atualizar FT do controlador
+            if (data.latex_controlador !== undefined) {
+                document.getElementById('latex-controlador').innerHTML = data.latex_controlador;
+            }
+
+            // Atualizar polinômio característico atual
+            if (data.poly_caracteristico !== undefined) {
+                document.getElementById('poly-caracteristico').innerHTML = data.poly_caracteristico;
+            }
+
+            // Atualizar polinômio desejado
+            if (data.poly_desejado !== undefined) {
+                document.getElementById('poly-desejado-latex').innerHTML = data.poly_desejado;
+            }
+
+            // Atualizar gráfico de polos e zeros (malha fechada)
+            if (data.plot_pz_closed) {
+                Plotly.newPlot('plot-pz', data.plot_pz_closed.data, data.plot_pz_closed.layout, { responsive: true });
+            }
+
+            // Atualizar gráfico de resposta ao degrau (malha aberta)
+            if (data.plot_open) {
+                Plotly.newPlot('plot-open', data.plot_open.data, data.plot_open.layout, { responsive: true });
+            }
+
+            // Atualizar gráfico de resposta ao degrau (malha fechada)
+            if (data.plot_closed) {
+                Plotly.newPlot('novo-plot-closed', data.plot_closed.data, data.plot_closed.layout, { responsive: true });
+            }
 
             if (window.MathJax) MathJax.typesetPromise();
-            fetch('/novo_grafico_fechado', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            polos_planta: polos_planta,
-            zeros_planta: zeros_planta,
-            polos_controlador: polos_controlador,
-            zeros_controlador: zeros_controlador,
-            ganho_controlador: ganho_controlador,
-            ganho_planta: ganho_planta
         })
-    })
-    .then(resp => resp.json())
-    .then((data) => {
-        Plotly.newPlot('novo-plot-closed', data.novo_grafico_data.data, data.novo_grafico_data.layout, { responsive: true });
-    });
-        });
+        .catch(err => console.error('Erro ao atualizar:', err));
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateParamLists();
+        updateAll();
+    });
 
     // Modal PMF
     function abrirModalPmf() {

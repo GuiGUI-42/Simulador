@@ -46,7 +46,7 @@
             <div style="margin-top:10px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Modelagem</div>
             <a href="/state" class="menu-link" style="margin-top:0;">Espaço de Estados (Sistema Mecânico)</a>
             <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Sinais e Sistemas</div>
-            <a href="/estabilidade" class="menu-link" style="margin-top:0;">Estabilidade</a>
+            
             <a href="/sinais" class="menu-link" style="margin-top:0;">Resposta do Sistema</a>
             <div style="margin-top:16px; margin-bottom:2px; font-weight:bold; color:#1976d2;">Controle</div>
             <a href="/alocacao" class="menu-link" style="margin-top:0;">Alocação de Polos</a>
@@ -220,12 +220,12 @@
                 <div id="plot_closed"></div>
             </div>
 
-            <!-- Diagrama de Polos e Zeros -->
+            <!-- Diagrama de Polos e Zeros (Malha Fechada) -->
             <div style="display: flex; align-items: center; margin-bottom: 4px; margin-top: 16px;">
-                <button id="seta-grafico-pz" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
-                <h4 style="margin: 0 8px 0 0;">Diagrama de Polos e Zeros</h4>
+                <button id="seta-grafico-pz-closed" class="seta-grafico-btn" style="background:none;border:none;font-size:1.3em;cursor:pointer;color:#2196f3;margin-right:6px;">&#x25BC;</button>
+                <h4 style="margin: 0 8px 0 0;">Diagrama de Polos e Zeros (Malha Fechada)</h4>
             </div>
-            <div id="plot_pz"></div>
+            <div id="plot_pz_closed"></div>
 
             <!-- Resposta ao Degrau (Malha Aberta) -->
             <div id="malha-aberta-container">
@@ -345,7 +345,6 @@
             polosControlador.push(parseFloat(document.getElementById(`polo-controlador-input-${i}`).value));
             zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-input-${i}`).value));
         }
-        // LEIA DIRETAMENTE DOS INPUTS
         const t_perturb_fechada = parseFloat(document.getElementById('input-t-fechada-grafico').value);
         const amp_perturb_fechada = parseFloat(document.getElementById('input-a-fechada-grafico').value);
 
@@ -365,60 +364,19 @@
             body: JSON.stringify(data)
         });
         const json = await res.json();
-        console.log(json); // Para depuração
 
-        // Adicione checagem de campos antes de acessar
-        if (json.latex_planta_polinomial)
-            document.getElementById("ft-planta-polinomial").innerHTML = json.latex_planta_polinomial;
-        else
-            document.getElementById("ft-planta-polinomial").innerHTML = "Erro ao carregar forma polinomial";
+        document.getElementById("ft-planta-polinomial").innerHTML = json.latex_planta_polinomial || "Erro ao carregar forma polinomial";
+        document.getElementById("ft-planta-fatorada").innerHTML = json.latex_planta_fatorada || "Erro ao carregar forma fatorada";
+        document.getElementById("ft-planta-parcial").innerHTML = json.latex_planta_parcial || "Erro ao carregar fração parcial";
 
-        if (json.latex_planta_fatorada)
-            document.getElementById("ft-planta-fatorada").innerHTML = json.latex_planta_fatorada;
-        else
-            document.getElementById("ft-planta-fatorada").innerHTML = "Erro ao carregar forma fatorada";
-
-        if (json.latex_planta_parcial)
-            document.getElementById("ft-planta-parcial").innerHTML = json.latex_planta_parcial;
-        else
-            document.getElementById("ft-planta-parcial").innerHTML = "Erro ao carregar fração parcial";
-
-        // Corrigido: renderização das FTs do controlador (faltava polinomial e fatorada)
-        if (json.latex_controlador_polinomial)
-            document.getElementById("ft-controlador-polinomial").innerHTML = json.latex_controlador_polinomial;
-        else
-            document.getElementById("ft-controlador-polinomial").innerHTML = "Erro ao carregar forma polinomial";
-
-        if (json.latex_controlador_fatorada)
-            document.getElementById("ft-controlador-fatorada").innerHTML = json.latex_controlador_fatorada;
-        else
-            document.getElementById("ft-controlador-fatorada").innerHTML = "Erro ao carregar forma fatorada";
-
-        if (json.latex_controlador_parcial)
-            document.getElementById("ft-controlador-parcial").innerHTML = json.latex_controlador_parcial;
-        else
-            document.getElementById("ft-controlador-parcial").innerHTML = "Erro ao carregar fração parcial";
-
-        // Atualiza a exibição das FTs conforme seleção
-        if (document.getElementById("select-ft-planta")._updateDisplay) {
-            document.getElementById("select-ft-planta")._updateDisplay();
-        }
-        if (document.getElementById("select-ft-controlador")._updateDisplay) {
-            document.getElementById("select-ft-controlador")._updateDisplay();
-        }
+        document.getElementById("ft-controlador-polinomial").innerHTML = json.latex_controlador_polinomial || "Erro ao carregar forma polinomial";
+        document.getElementById("ft-controlador-fatorada").innerHTML = json.latex_controlador_fatorada || "Erro ao carregar forma fatorada";
+        document.getElementById("ft-controlador-parcial").innerHTML = json.latex_controlador_parcial || "Erro ao carregar fração parcial";
 
         if (window.MathJax) MathJax.typesetPromise();
 
-        // Só plote se os dados existirem
-        if (json.plot_pz_data && json.plot_pz_data.data)
-            Plotly.newPlot('plot_pz', json.plot_pz_data.data, json.plot_pz_data.layout);
-        if (json.plot_open_data && json.plot_open_data.data)
-            Plotly.newPlot('plot_open', json.plot_open_data.data, json.plot_open_data.layout);
-        if (json.plot_closed_data && json.plot_closed_data.data)
-            Plotly.newPlot('plot_closed', json.plot_closed_data.data, json.plot_closed_data.layout);
-
-        // Removido: checagem de checkboxes para exibir/ocultar gráficos
-        // Os gráficos serão controlados apenas pelas setas
+        Plotly.newPlot('plot_open', json.plot_open_data.data, json.plot_open_data.layout);
+        Plotly.newPlot('plot_closed', json.plot_closed_data.data, json.plot_closed_data.layout);
     }
 
     async function atualizarBodeNyquist() {
@@ -468,6 +426,41 @@
     async function atualizarTudo() {
         await atualizar(); // Atualiza os gráficos de polos e zeros e resposta ao degrau
         await atualizarBodeNyquist(); // Atualiza os diagramas de Bode e Nyquist
+        await atualizarPZClosed(); // Atualiza o diagrama de polos e zeros em malha fechada
+    }
+
+    async function atualizarPZClosed() {
+        const ordem = parseInt(document.getElementById("ordem-sistema").value);
+        const polosPlanta = [];
+        const zerosPlanta = [];
+        const polosControlador = [];
+        const zerosControlador = [];
+        const ganhoControlador = parseFloat(document.getElementById('ganho-controlador').value);
+
+        for (let i = 1; i <= ordem; i++) {
+            polosPlanta.push(parseFloat(document.getElementById(`polo-planta-input-${i}`).value));
+            zerosPlanta.push(parseFloat(document.getElementById(`zero-planta-input-${i}`).value));
+            polosControlador.push(parseFloat(document.getElementById(`polo-controlador-input-${i}`).value));
+            zerosControlador.push(parseFloat(document.getElementById(`zero-controlador-input-${i}`).value));
+        }
+
+        const data = {
+            ordem: ordem,
+            polos_planta: polosPlanta,
+            zeros_planta: zerosPlanta,
+            polos_controlador: polosControlador,
+            zeros_controlador: zerosControlador,
+            ganho_controlador: ganhoControlador
+        };
+
+        const res = await fetch('/atualizar_pz_closed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+
+        Plotly.newPlot('plot_pz_closed', json.plot_pz_closed.data, json.plot_pz_closed.layout);
     }
 
     // Troque window.onload e eventos para usar atualizarTudo:
@@ -475,26 +468,18 @@
         atualizarSliders();
         atualizarTudo();
 
-        // Inicialização das setas dos gráficos (agora dentro do onload!)
-        setaGraficoToggle('seta-grafico-pz', 'plot_pz');
+        // Inicialização das setas dos gráficos
         setaGraficoToggle('seta-grafico-malha-aberta', 'plot_open');
         setaGraficoToggle('seta-grafico-bode', 'plot_bode');
         setaGraficoToggle('seta-grafico-nyquist', 'nyquist-img-container');
         setaGraficoToggle('seta-grafico-closed', 'container-plot-closed');
+        setaGraficoToggle('seta-grafico-pz-closed', 'plot_pz_closed');
 
         // Deixe todos ocultos no início, exceto malha fechada
-        document.getElementById('plot_pz').style.display = 'none';
+        document.getElementById('plot_open').style.display = 'none';
         document.getElementById('plot_bode').style.display = 'none';
         document.getElementById('nyquist-img-container').style.display = 'none';
-        document.getElementById('plot_open').style.display = 'none';
-        // Malha fechada sempre visível
-
-        // Adicione eventos dos sliders e inputs
-        document.getElementById("ordem-sistema").addEventListener("change", atualizarSliders);
-        document.getElementById('ganho-controlador').addEventListener('input', atualizarTudo);
-
-        setupFTSelect("select-ft-planta", "ft-planta-fatorada", "ft-planta-polinomial", "ft-planta-parcial");
-        setupFTSelect("select-ft-controlador", "ft-controlador-fatorada", "ft-controlador-polinomial", "ft-controlador-parcial");
+        document.getElementById('plot_pz_closed').style.display = 'none';
     };
 
     // Menu e modo escuro (mantém igual)
@@ -597,17 +582,18 @@
         atualizarSliders();
         atualizarTudo();
 
-        setaGraficoToggle('seta-grafico-pz', 'plot_pz');
+        // Inicialização das setas dos gráficos
         setaGraficoToggle('seta-grafico-malha-aberta', 'plot_open');
         setaGraficoToggle('seta-grafico-bode', 'plot_bode');
         setaGraficoToggle('seta-grafico-nyquist', 'nyquist-img-container');
         setaGraficoToggle('seta-grafico-closed', 'container-plot-closed');
+        setaGraficoToggle('seta-grafico-pz-closed', 'plot_pz_closed');
 
         // Deixe todos ocultos no início, exceto malha fechada
-        document.getElementById('plot_pz').style.display = 'none';
+        document.getElementById('plot_open').style.display = 'none';
         document.getElementById('plot_bode').style.display = 'none';
         document.getElementById('nyquist-img-container').style.display = 'none';
-        document.getElementById('plot_open').style.display = 'none';
+        document.getElementById('plot_pz_closed').style.display = 'none';
 
         document.getElementById("ordem-sistema").addEventListener("change", atualizarSliders);
         document.getElementById('ganho-controlador').addEventListener('input', atualizarTudo);
