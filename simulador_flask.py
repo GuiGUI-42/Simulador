@@ -311,8 +311,10 @@ def atualizar_pz_closed():
     G_closed = ctl.feedback(G_planta * G_controlador)
 
     # Polos e zeros em malha fechada
-    zeros_closed = np.roots(G_closed.num[0][0])
-    poles_closed = np.roots(G_closed.den[0][0])
+    num_closed = np.array(G_closed.num).flatten()
+    den_closed = np.array(G_closed.den).flatten()
+    zeros_closed = np.roots(num_closed)
+    poles_closed = np.roots(den_closed)
 
     plot_pz_closed = {
         "data": [
