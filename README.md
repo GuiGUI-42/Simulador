@@ -15,4 +15,3 @@ Este repositório contém o **SisCo**, um simulador web interativo para análise
 - **Interface web interativa** (HTML + Plotly)
 - **Exportação de resultados e LaTeX das funções de transferência**
 
-## Instalação
